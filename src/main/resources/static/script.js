@@ -1,187 +1,248 @@
-const tabela = document.getElementById("tabelaLista");
-const btnNovaLista = document.getElementById("btnNovaLista");
-const btnSalvarLista = document.getElementById("btnSalvarLista");
-const btnExportar = document.getElementById("btnExportar");
-const btnCarregarLista = document.getElementById("btnCarregarLista");
-const btnImportarLista = document.getElementById("btnImportarLista");
-const btnResetarBanco = document.getElementById("btnResetarBanco");
-const fileInput = document.getElementById("fileInput");
+// script.js FINALIZADO E FUNCIONAL
 
-btnNovaLista.onclick = criarNovaLista;
-btnSalvarLista.onclick = salvarLista;
-btnExportar.onclick = exportarLista;
-btnCarregarLista.onclick = carregarListaSalva;
-btnImportarLista.onclick = () => fileInput.click();
-btnResetarBanco.onclick = resetarBanco;
+let tabela = document.getElementById("listaTabela").getElementsByTagName("tbody")[0];
+let cacheCopiado = [];
 
-fileInput.addEventListener("change", importarArquivoExcel);
+const unidades = ["un", "cj", "kg", "mm", "m"];
+const tiposEstrutura = ["Manufatura", "Comprado", ""];
+const fatorSucata = ["0", "15", ""];
+const linhaValores = Array.from({ length: 80 }, (_, i) => String((i + 1) * 10));
+const alternativas = ["*", ""];
+const siteValores = ["1", ""];
 
-function criarNovaLista() {
-  const headers = [
-    "codigoMaterial", "nivel", "tipoEstrutura",
-    "linha", "itemComponente", "qtdeMontagem",
-    "unidadeMedida", "fatorSucata"
-  ];
-  const table = document.createElement("table");
-  const thead = document.createElement("thead");
-  const headerRow = document.createElement("tr");
-  headers.forEach(h => {
-    const th = document.createElement("th");
-    th.textContent = h;
-    headerRow.appendChild(th);
-  });
-  thead.appendChild(headerRow);
-  table.appendChild(thead);
+function inputCell(type, readOnly = false, value = "") {
+    const td = document.createElement("td");
+    const input = document.createElement("input");
+    input.type = type;
+    input.readOnly = readOnly;
+    input.value = value.toUpperCase();
+    input.addEventListener("input", (e) => {
+        e.target.value = e.target.value.toUpperCase();
+        verificarDuplicatas();
+    });
+    td.appendChild(input);
+    return td;
+}
 
-  const tbody = document.createElement("tbody");
-  for (let i = 0; i < 10; i++) {
+function selectCell(options = [], selected = "") {
+    const td = document.createElement("td");
+    const select = document.createElement("select");
+    options.forEach(opt => {
+        const option = document.createElement("option");
+        option.value = opt;
+        option.textContent = opt;
+        if (opt === selected) option.selected = true;
+        select.appendChild(option);
+    });
+    select.addEventListener("change", verificarDuplicatas);
+    td.appendChild(select);
+    return td;
+}
+
+function criarLinha(v = {}) {
     const row = document.createElement("tr");
-    headers.forEach(() => {
-      const td = document.createElement("td");
-      const input = document.createElement("input");
-      input.type = "text";
-      td.appendChild(input);
-      row.appendChild(td);
-    });
-    tbody.appendChild(row);
-  }
-  table.appendChild(tbody);
+    const checkboxTd = document.createElement("td");
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.classList.add("linha-selecao");
+    checkboxTd.appendChild(checkbox);
+    row.appendChild(checkboxTd);
 
-  tabela.innerHTML = "";
-  tabela.appendChild(table);
+    row.appendChild(selectCell(siteValores, v.SITE || "1"));
+    row.appendChild(selectCell(alternativas, v.ALTERNATIVA || "*"));
+    row.appendChild(inputCell("text", false, v.CODIGO_MATERIAL || ""));
+    row.appendChild(inputCell("text", false, v.NIVEL || "1"));
+    row.appendChild(selectCell(tiposEstrutura, v.TIPO_ESTRUTURA || "Manufatura"));
+    row.appendChild(selectCell(linhaValores, v.LINHA || "10"));
+    row.appendChild(inputCell("text", false, v.ITEM_COMPONENTE || ""));
+    row.appendChild(inputCell("number", false, v.QTDE_MONTAGEM || "0"));
+    row.appendChild(selectCell(unidades, v.UNIDADE_MEDIDA || "un"));
+    row.appendChild(selectCell(fatorSucata, v.FATOR_SUCATA || "0"));
+
+    tabela.appendChild(row);
 }
 
-async function salvarLista() {
-  const rows = tabela.querySelectorAll("tbody tr");
-  let sucesso = 0;
-  for (const row of rows) {
-    const cells = Array.from(row.querySelectorAll("input")).map(el => el.value.trim());
-    if (cells.every(v => v === "")) continue;
-    const body = {
-      codigoMaterial: cells[0],
-      nivel: cells[1],
-      tipoEstrutura: cells[2],
-      linha: cells[3],
-      itemComponente: cells[4],
-      qtdeMontagem: cells[5],
-      unidadeMedida: cells[6],
-      fatorSucata: cells[7]
+function criar10Linhas() {
+    for (let i = 0; i < 10; i++) criarLinha();
+}
+
+function getLinhaData(tr) {
+    const cells = tr.querySelectorAll("td");
+    return {
+        SITE: cells[1]?.querySelector("select")?.value || "",
+        ALTERNATIVA: cells[2]?.querySelector("select")?.value || "",
+        CODIGO_MATERIAL: cells[3]?.querySelector("input")?.value.trim().toUpperCase() || "",
+        NIVEL: cells[4]?.querySelector("input")?.value.trim() || "",
+        TIPO_ESTRUTURA: cells[5]?.querySelector("select")?.value || "",
+        LINHA: cells[6]?.querySelector("select")?.value || "",
+        ITEM_COMPONENTE: cells[7]?.querySelector("input")?.value.trim().toUpperCase() || "",
+        QTDE_MONTAGEM: cells[8]?.querySelector("input")?.value.trim() || "",
+        UNIDADE_MEDIDA: cells[9]?.querySelector("select")?.value || "",
+        FATOR_SUCATA: cells[10]?.querySelector("select")?.value || ""
     };
-    const res = await fetch("/api/listas", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body)
+}
+
+function preencherLinha(row, data) {
+    const cells = row.querySelectorAll("td");
+    cells[1].querySelector("select").value = data.SITE;
+    cells[2].querySelector("select").value = data.ALTERNATIVA;
+    cells[3].querySelector("input").value = data.CODIGO_MATERIAL;
+    cells[4].querySelector("input").value = data.NIVEL;
+    cells[5].querySelector("select").value = data.TIPO_ESTRUTURA;
+    cells[6].querySelector("select").value = data.LINHA;
+    cells[7].querySelector("input").value = data.ITEM_COMPONENTE;
+    cells[8].querySelector("input").value = data.QTDE_MONTAGEM;
+    cells[9].querySelector("select").value = data.UNIDADE_MEDIDA;
+    cells[10].querySelector("select").value = data.FATOR_SUCATA;
+}
+
+function verificarDuplicatas() {
+    const linhas = Array.from(tabela.rows);
+    const hashes = new Map();
+    const conjuntos = new Map();
+
+    linhas.forEach(row => row.style.backgroundColor = "");
+
+    linhas.forEach((tr) => {
+        const data = getLinhaData(tr);
+        if (data.CODIGO_MATERIAL === "" && data.ITEM_COMPONENTE === "") return;
+
+        const hash = `${data.SITE}|${data.ALTERNATIVA}|${data.CODIGO_MATERIAL}|${data.TIPO_ESTRUTURA}|${data.ITEM_COMPONENTE}|${data.UNIDADE_MEDIDA}|${data.FATOR_SUCATA}`;
+        const groupHash = `${data.CODIGO_MATERIAL}|${data.ITEM_COMPONENTE}`;
+
+        if (!hashes.has(hash)) hashes.set(hash, []);
+        hashes.get(hash).push({ row: tr, data });
+
+        if (!conjuntos.has(groupHash)) conjuntos.set(groupHash, []);
+        conjuntos.get(groupHash).push(tr);
     });
-    if (res.ok) sucesso++;
-  }
-  Swal.fire("✅ Sucesso", `${sucesso} linhas salvas.`, "success");
-}
 
-async function carregarListaSalva() {
-  try {
-    const res = await fetch("/api/listas");
-    const dados = await res.json();
-    if (!dados.length) {
-      Swal.fire("📂 Lista vazia", "Nenhum dado encontrado.", "info");
-      return;
+    for (const [, items] of hashes) {
+        const ativos = items.filter(item => item.data.CODIGO_MATERIAL && item.data.ITEM_COMPONENTE);
+        if (ativos.length > 1) {
+            ativos.forEach(item => item.row.style.backgroundColor = "#f0e6ff");
+        }
     }
-    renderizarTabela(dados);
-  } catch (e) {
-    Swal.fire("Erro", "Falha ao carregar dados do banco.", "error");
-  }
+
+    for (const [, rows] of conjuntos) {
+        if (rows.length > 1) {
+            rows.forEach(row => row.style.backgroundColor = "#d9c2ff");
+        }
+    }
 }
 
-function importarArquivoExcel(e) {
-  const file = e.target.files[0];
-  if (!file) return;
+// Ações de botão
+document.getElementById("criarListaBtn").addEventListener("click", () => {
+    tabela.innerHTML = "";
+    criar10Linhas();
+    Swal.fire("✅ Lista iniciada", "10 linhas criadas com sucesso!", "success");
+});
 
-  const reader = new FileReader();
-  reader.onload = function (e) {
-    const data = new Uint8Array(e.target.result);
+document.getElementById("continuarListaBtn").addEventListener("click", () => {
+    criar10Linhas();
+    Swal.fire("➕ Adicionado", "10 novas linhas foram inseridas.", "success");
+});
+
+document.getElementById("copiarSelecionadoBtn").addEventListener("click", () => {
+    const selecionados = document.querySelectorAll(".linha-selecao:checked");
+    if (selecionados.length === 0) return Swal.fire("⚠️ Nada selecionado", "Marque uma linha.", "info");
+
+    cacheCopiado = Array.from(selecionados).map(cb => getLinhaData(cb.closest("tr")));
+
+    Swal.fire("📋 Copiado", `${cacheCopiado.length} linha(s) armazenada(s).`, "success");
+});
+
+document.getElementById("colarBtn").addEventListener("click", () => {
+    const selecionados = document.querySelectorAll(".linha-selecao:checked");
+    if (selecionados.length !== 1) return Swal.fire("⚠️ Selecione uma única linha como referência.", "", "info");
+
+    const trBase = selecionados[0].closest("tr");
+    let index = Array.from(tabela.rows).indexOf(trBase);
+
+    cacheCopiado.forEach((linha, i) => {
+        let row = tabela.rows[index + i];
+        if (!row) {
+            criarLinha();
+            row = tabela.rows[index + i];
+        }
+        preencherLinha(row, linha);
+    });
+
+    verificarDuplicatas();
+});
+
+document.getElementById("deletarSelecionadosBtn").addEventListener("click", () => {
+    document.querySelectorAll(".linha-selecao:checked").forEach(cb => cb.closest("tr").remove());
+});
+
+document.getElementById("inserirAcimaBtn").addEventListener("click", () => {
+    const selecionados = document.querySelectorAll(".linha-selecao:checked");
+    if (selecionados.length !== 1) return Swal.fire("⚠️ Selecione uma única linha", "Para inserir acima, selecione apenas uma.", "info");
+
+    const row = selecionados[0].closest("tr");
+    const nova = criarLinhaVazia();
+    tabela.insertBefore(nova, row);
+});
+
+document.getElementById("inserirAbaixoBtn").addEventListener("click", () => {
+    const selecionados = document.querySelectorAll(".linha-selecao:checked");
+    if (selecionados.length !== 1) return Swal.fire("⚠️ Selecione uma única linha", "Para inserir abaixo, selecione apenas uma.", "info");
+
+    const row = selecionados[0].closest("tr");
+    const nova = criarLinhaVazia();
+    tabela.insertBefore(nova, row.nextSibling);
+});
+
+document.getElementById("salvarListaBtn").addEventListener("click", () => {
+    const dados = Array.from(tabela.rows).map(tr => {
+        const cells = tr.querySelectorAll("td");
+        return {
+            SITE: cells[1].querySelector("select").value,
+            ALTERNATIVA: cells[2].querySelector("select").value,
+            CÓDIGO_MATERIAL: cells[3].querySelector("input").value.trim().toUpperCase(),
+            NÍVEL: cells[4].querySelector("input").value.trim(),
+            TIPO_ESTRUTURA: cells[5].querySelector("select").value,
+            LINHA: cells[6].querySelector("select").value,
+            ITEM_COMPONENTE: cells[7].querySelector("input").value.trim().toUpperCase(),
+            QTDE_MONTAGEM: cells[8].querySelector("input").value.trim(),
+            UNIDADE_DE_MEDIDA: cells[9].querySelector("select").value,
+            FATOR_SUCATA: cells[10].querySelector("select").value
+        };
+    });
+
+    const ws = XLSX.utils.json_to_sheet(dados);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "ListaIFS");
+    XLSX.writeFile(wb, `lista_padrao_ifs_${new Date().toISOString().split("T")[0]}.xlsx`);
+    Swal.fire("💾 Lista Exportada", "Arquivo Excel gerado com sucesso.", "success");
+});
+
+document.getElementById("inputFile").addEventListener("change", async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const data = await file.arrayBuffer();
     const workbook = XLSX.read(data, { type: "array" });
     const sheet = workbook.Sheets[workbook.SheetNames[0]];
     const json = XLSX.utils.sheet_to_json(sheet);
-    renderizarTabela(json);
-    Swal.fire("✅ Importado", "Lista carregada do Excel.", "success");
-  };
-  reader.readAsArrayBuffer(file);
-}
+    tabela.innerHTML = "";
+    json.forEach(row => criarLinha({
+        SITE: row.SITE,
+        ALTERNATIVA: row.ALTERNATIVA,
+        CODIGO_MATERIAL: row["CÓDIGO_MATERIAL"] || row["CODIGO MATERIAL"],
+        NIVEL: row.NIVEL,
+        TIPO_ESTRUTURA: row["TIPO ESTRUTURA"],
+        LINHA: row.LINHA,
+        ITEM_COMPONENTE: row.ITEM_COMPONENTE,
+        QTDE_MONTAGEM: row.QTDE_MONTAGEM,
+        UNIDADE_MEDIDA: row["UNIDADE DE MEDIDA"],
+        FATOR_SUCATA: row.FATOR_SUCATA,
+    }));
+    Swal.fire("✅ Lista carregada", "A tabela foi preenchida com sucesso.", "success");
+});
 
-async function resetarBanco() {
-  const confirm = await Swal.fire({
-    title: "Tem certeza?",
-    text: "Todos os dados ser\u00e3o apagados.",
-    icon: "warning",
-    showCancelButton: true,
-    confirmButtonText: "Sim, apagar",
-    cancelButtonText: "Cancelar"
-  });
-  if (confirm.isConfirmed) {
-    const res = await fetch("/api/listas/resetar", { method: "DELETE" });
-    if (res.ok) {
-      tabela.innerHTML = "";
-      Swal.fire("🗑️ Banco Limpo", "Todos os dados foram apagados.", "success");
-    } else {
-      Swal.fire("Erro", "Falha ao resetar banco.", "error");
-    }
-  }
-}
-
-function renderizarTabela(dados) {
-  const headers = [
-    "codigoMaterial", "nivel", "tipoEstrutura",
-    "linha", "itemComponente", "qtdeMontagem",
-    "unidadeMedida", "fatorSucata"
-  ];
-  const table = document.createElement("table");
-  const thead = document.createElement("thead");
-  const headerRow = document.createElement("tr");
-  headers.forEach(h => {
-    const th = document.createElement("th");
-    th.textContent = h;
-    headerRow.appendChild(th);
-  });
-  thead.appendChild(headerRow);
-  table.appendChild(thead);
-
-  const tbody = document.createElement("tbody");
-  dados.forEach(item => {
-    const row = document.createElement("tr");
-    headers.forEach(h => {
-      const td = document.createElement("td");
-      const input = document.createElement("input");
-      input.type = "text";
-      input.value = item[h] || "";
-      td.appendChild(input);
-      row.appendChild(td);
-    });
-    tbody.appendChild(row);
-  });
-  table.appendChild(tbody);
-
-  tabela.innerHTML = "";
-  tabela.appendChild(table);
-}
-
-function exportarLista() {
-  const linhas = tabela.querySelectorAll("tbody tr");
-  const dados = [];
-  linhas.forEach(row => {
-    const cells = Array.from(row.querySelectorAll("input")).map(el => el.value.trim());
-    if (cells.every(v => v === "")) return;
-    dados.push({
-      codigoMaterial: cells[0],
-      nivel: cells[1],
-      tipoEstrutura: cells[2],
-      linha: cells[3],
-      itemComponente: cells[4],
-      qtdeMontagem: cells[5],
-      unidadeMedida: cells[6],
-      fatorSucata: cells[7]
-    });
-  });
-  const ws = XLSX.utils.json_to_sheet(dados);
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "ListaIFS");
-  XLSX.writeFile(wb, "lista-padrao-ifs.xlsx");
+function criarLinhaVazia() {
+    const dummy = document.createElement("tbody");
+    criarLinha();
+    dummy.appendChild(tabela.lastChild);
+    return dummy.removeChild(dummy.firstChild);
 }

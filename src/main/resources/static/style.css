@@ -1,82 +1,170 @@
 body {
-  font-family: Arial, sans-serif;
-  margin: 0;
-  padding: 1rem;
-  background-color: #f2f2f2;
+    font-family: Arial, sans-serif;
+    background-color: #f5f5f5;
+    margin: 0;
+    padding: 20px;
+    color: #333;
+}
+
+.container {
+    max-width: 1400px;
+    margin: auto;
 }
 
 header {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  padding-bottom: 1rem;
-  border-bottom: 2px solid #ccc;
+    display: flex;
+    align-items: center;
+    margin-bottom: 20px;
 }
 
 .logo {
-  height: 50px;
+    height: 50px;
+    margin-right: 20px;
 }
 
 h1 {
-  font-size: 1.8rem;
-  color: #333;
+    font-size: 24px;
 }
 
-.action-section {
-  margin-top: 1rem;
-  display: flex;
-  gap: 1rem;
-  flex-wrap: wrap;
+.button-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 20px;
 }
 
-button {
-  padding: 0.6rem 1.2rem;
-  background-color: #1976d2;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  font-weight: bold;
-  cursor: pointer;
-  transition: background-color 0.3s;
+.button-bar button,
+.file-label {
+    background-color: #673ab7;
+    color: #fff;
+    border: none;
+    padding: 10px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    font-weight: bold;
 }
 
-button:hover {
-  background-color: #1565c0;
+.button-bar button:hover,
+.file-label:hover {
+    background-color: #5e35b1;
 }
 
-.excel-table {
-  margin-top: 1.5rem;
-  background-color: white;
-  border: 1px solid #ccc;
-  border-radius: 8px;
-  padding: 1rem;
-  overflow-x: auto;
-  max-height: 500px;
+.copy-options {
+    margin-bottom: 10px;
+    display: flex;
+    gap: 20px;
+    align-items: center;
+    font-weight: bold;
 }
 
-.excel-table table {
-  width: 100%;
-  border-collapse: collapse;
+.table-container {
+    overflow-x: auto;
+    margin-bottom: 20px;
 }
 
-.excel-table th,
-.excel-table td {
-  border: 1px solid #ddd;
-  padding: 0.8rem; /* ← Campo mais largo para visualização */
-  text-align: left;
+table {
+    width: 100%;
+    border-collapse: collapse;
+    background-color: #fff;
+    border-radius: 6px;
+    overflow: hidden;
 }
 
-.excel-table th {
-  background-color: #e3f2fd;
-  position: sticky;
-  top: 0;
+th, td {
+    border: 1px solid #ccc;
+    padding: 8px;
+    text-align: center;
 }
 
-/* ⭐ Alternar tons de linha: edite os tons aqui se desejar */
-.excel-table tbody tr:nth-child(even) {
-  background-color: #f9f9f9;
+th {
+    background-color: #ede7f6;
+    font-weight: bold;
+    font-size: 13px;
 }
 
-.excel-table tbody tr:nth-child(odd) {
-  background-color: #eeeeee;
+td input, td select {
+    width: 100%;
+    border: none;
+    background: transparent;
+    text-align: center;
+    font-size: 13px;
+    text-transform: uppercase;
+}
+
+.cards-container {
+    display: flex;
+    gap: 20px;
+    margin-top: 30px;
+    justify-content: space-between;
+    flex-wrap: wrap;
+}
+
+.code-card {
+    flex: 1;
+    min-width: 320px;
+    background-color: #fff;
+    border: 1px solid #ccc;
+    padding: 15px;
+    border-radius: 8px;
+    box-shadow: 1px 1px 6px rgba(0,0,0,0.1);
+    position: relative;
+}
+
+.code-card h3 {
+    margin-top: 0;
+    display: flex;
+    align-items: center;
+    font-size: 16px;
+    gap: 8px;
+}
+
+.code-card .add-card-btn {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    border: 1px solid #444;
+    padding: 2px 6px;
+    font-weight: bold;
+    border-radius: 4px;
+    background-color: #f5f5f5;
+    cursor: pointer;
+}
+
+.code-card .add-card-btn:hover {
+    background-color: #ddd;
+}
+
+.duplicado-box {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.editable-pre {
+    background-color: #ede7f6;
+    border: 1px dashed #7e57c2;
+    padding: 10px;
+    border-radius: 6px;
+    min-height: 60px;
+    white-space: pre-wrap;
+    word-break: break-word;
+    font-family: monospace;
+    font-size: 13px;
+    outline: none;
+}
+
+.editable-pre:focus {
+    box-shadow: 0 0 0 2px #9575cd;
+}
+
+.editable-pre::placeholder {
+    color: #999;
+}
+
+@media (max-width: 768px) {
+    .cards-container {
+        flex-direction: column;
+    }
 }

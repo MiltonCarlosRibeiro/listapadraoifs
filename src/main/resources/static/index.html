@@ -1,33 +1,64 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lista Padrão IFS</title>
+    <title>Lista Técnica - Padrão IFS</title>
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
 </head>
 <body>
-<header>
-    <img src="assets/logo.png" alt="Logo Pakmatic" class="logo">
-    <h1>Lista Padrão IFS</h1>
-</header>
+<div class="container">
+    <header>
+        <img src="assets/logo.png" alt="Logo Pakmatic" class="logo">
+        <h1>🧾 Lista Técnica - Padrão IFS</h1>
+    </header>
 
-<main>
-    <div class="action-section">
-        <button id="btnNovaLista">🆕 Criar Nova Lista</button>
-        <button id="btnSalvarLista">💾 Salvar Lista</button>
-        <button id="btnExportar">📤 Exportar (.xlsx)</button>
-        <button id="btnCarregarLista">📂 Carregar Lista Salva</button>
-        <button id="btnImportarLista">📁 Importar Lista Existente</button>
-        <button id="btnResetarBanco">🗑️ Resetar Banco de Dados</button>
+    <div class="button-bar">
+        <button id="criarListaBtn">➕ Criar Nova Lista</button>
+        <label for="inputFile" class="file-label styled-importar">
+            📁⬇️ Importar Lista
+            <input type="file" id="inputFile" accept=".xlsx, .xls" style="display: none;">
+        </label>
+        <button id="continuarListaBtn">➕📄 Continuar Lista</button>
+        <button id="salvarListaBtn">💾 Salvar Lista</button>
+        <button id="copiarSelecionadoBtn">📋 Copiar Selecionado</button>
+        <button id="colarBtn">📥 Colar</button>
+        <button id="deletarSelecionadosBtn">🗑️ Deletar Linha</button>
+        <button id="inserirAcimaBtn">🔼 Linha Acima</button>
+        <button id="inserirAbaixoBtn">🔽 Linha Abaixo</button>
     </div>
 
-    <input type="file" id="fileInput" accept=".xlsx,.xls" style="display:none" />
-    <div class="excel-table" id="tabelaLista"></div>
-</main>
+    <div class="copy-options">
+        <label><input type="checkbox" id="copiarLinhaCheckbox"> Copiar Linha</label>
+        <label><input type="checkbox" id="copiarConjuntoCheckbox"> Copiar Conjunto</label>
+    </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <div class="table-container">
+        <table id="listaTabela">
+            <thead>
+            <tr>
+                <th></th> <!-- Checkbox -->
+                <th>SITE</th>
+                <th>ALTERNATIVA</th>
+                <th>CÓDIGO_MATERIAL</th>
+                <th>NÍVEL</th>
+                <th>TIPO ESTRUTURA</th>
+                <th>LINHA</th>
+                <th>ITEM_COMPONENTE</th>
+                <th>QTDE_MONTAGEM</th>
+                <th>UNIDADE DE MEDIDA</th>
+                <th>FATOR_SUCATA</th>
+            </tr>
+            </thead>
+            <tbody>
+            <!-- Linhas dinâmicas -->
+            </tbody>
+        </table>
+    </div>
+</div>
+
 <script src="script.js"></script>
 </body>
 </html>
