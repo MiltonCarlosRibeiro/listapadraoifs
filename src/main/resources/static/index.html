@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lista Padrão IFS</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</head>
+<body>
+<header>
+    <img src="assets/logo.png" alt="Logo Pakmatic" class="logo">
+    <h1>Lista Padrão IFS</h1>
+</header>
+
+<main>
+    <div class="action-section">
+        <button id="btnNovaLista">🆕 Criar Nova Lista</button>
+        <button id="btnSalvarLista">💾 Salvar Lista</button>
+        <button id="btnCarregarLista">📂 Carregar Lista Salva</button>
+        <button id="btnExportar">📤 Exportar (.xlsx)</button>
+    </div>
+
+    <div class="excel-table" id="tabelaLista"></div>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="script.js"></script>
+</body>
+</html>

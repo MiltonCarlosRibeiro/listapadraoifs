@@ -1,0 +1,82 @@
+body {
+  font-family: Arial, sans-serif;
+  margin: 0;
+  padding: 1rem;
+  background-color: #f2f2f2;
+}
+
+header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid #ccc;
+}
+
+.logo {
+  height: 50px;
+}
+
+h1 {
+  font-size: 1.8rem;
+  color: #333;
+}
+
+.action-section {
+  margin-top: 1rem;
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+button {
+  padding: 0.6rem 1.2rem;
+  background-color: #1976d2;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+button:hover {
+  background-color: #1565c0;
+}
+
+.excel-table {
+  margin-top: 1.5rem;
+  background-color: white;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  padding: 1rem;
+  overflow-x: auto;
+  max-height: 500px;
+}
+
+.excel-table table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.excel-table th,
+.excel-table td {
+  border: 1px solid #ddd;
+  padding: 0.8rem; /* ← Campo mais largo para visualização */
+  text-align: left;
+}
+
+.excel-table th {
+  background-color: #e3f2fd;
+  position: sticky;
+  top: 0;
+}
+
+/* ⭐ Alternar tons de linha: edite os tons aqui se desejar */
+.excel-table tbody tr:nth-child(even) {
+  background-color: #f9f9f9;
+}
+
+.excel-table tbody tr:nth-child(odd) {
+  background-color: #eeeeee;
+}
