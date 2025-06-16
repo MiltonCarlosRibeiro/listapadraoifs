@@ -1,24 +1,27 @@
-let listaAtual = [];
-
 const tabela = document.getElementById("tabelaLista");
 const btnNovaLista = document.getElementById("btnNovaLista");
 const btnSalvarLista = document.getElementById("btnSalvarLista");
 const btnExportar = document.getElementById("btnExportar");
 const btnCarregarLista = document.getElementById("btnCarregarLista");
+const btnImportarLista = document.getElementById("btnImportarLista");
+const btnResetarBanco = document.getElementById("btnResetarBanco");
+const fileInput = document.getElementById("fileInput");
 
 btnNovaLista.onclick = criarNovaLista;
 btnSalvarLista.onclick = salvarLista;
 btnExportar.onclick = exportarLista;
-if (btnCarregarLista) btnCarregarLista.onclick = carregarListaSalva;
+btnCarregarLista.onclick = carregarListaSalva;
+btnImportarLista.onclick = () => fileInput.click();
+btnResetarBanco.onclick = resetarBanco;
+
+fileInput.addEventListener("change", importarArquivoExcel);
 
 function criarNovaLista() {
-  listaAtual = [];
   const headers = [
     "codigoMaterial", "nivel", "tipoEstrutura",
     "linha", "itemComponente", "qtdeMontagem",
     "unidadeMedida", "fatorSucata"
   ];
-
   const table = document.createElement("table");
   const thead = document.createElement("thead");
   const headerRow = document.createElement("tr");
@@ -49,23 +52,21 @@ function criarNovaLista() {
 }
 
 async function salvarLista() {
-  const inputs = tabela.querySelectorAll("tbody tr");
+  const rows = tabela.querySelectorAll("tbody tr");
   let sucesso = 0;
-  for (const row of inputs) {
-    const dados = Array.from(row.querySelectorAll("input")).map(el => el.value.trim());
-    if (dados.every(v => v === "")) continue; // ignora linha vazia
-
+  for (const row of rows) {
+    const cells = Array.from(row.querySelectorAll("input")).map(el => el.value.trim());
+    if (cells.every(v => v === "")) continue;
     const body = {
-      codigoMaterial: dados[0],
-      nivel: dados[1],
-      tipoEstrutura: dados[2],
-      linha: dados[3],
-      itemComponente: dados[4],
-      qtdeMontagem: dados[5],
-      unidadeMedida: dados[6],
-      fatorSucata: dados[7]
+      codigoMaterial: cells[0],
+      nivel: cells[1],
+      tipoEstrutura: cells[2],
+      linha: cells[3],
+      itemComponente: cells[4],
+      qtdeMontagem: cells[5],
+      unidadeMedida: cells[6],
+      fatorSucata: cells[7]
     };
-
     const res = await fetch("/api/listas", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -73,22 +74,65 @@ async function salvarLista() {
     });
     if (res.ok) sucesso++;
   }
-
-  Swal.fire("✅ Sucesso", `${sucesso} linha(s) salvas com sucesso!`, "success");
+  Swal.fire("✅ Sucesso", `${sucesso} linhas salvas.`, "success");
 }
 
 async function carregarListaSalva() {
-  const res = await fetch("/api/listas");
-  const dados = await res.json();
+  try {
+    const res = await fetch("/api/listas");
+    const dados = await res.json();
+    if (!dados.length) {
+      Swal.fire("📂 Lista vazia", "Nenhum dado encontrado.", "info");
+      return;
+    }
+    renderizarTabela(dados);
+  } catch (e) {
+    Swal.fire("Erro", "Falha ao carregar dados do banco.", "error");
+  }
+}
 
-  if (!dados.length) return Swal.fire("ℹ️ Aviso", "Nenhuma lista salva encontrada.", "info");
+function importarArquivoExcel(e) {
+  const file = e.target.files[0];
+  if (!file) return;
 
+  const reader = new FileReader();
+  reader.onload = function (e) {
+    const data = new Uint8Array(e.target.result);
+    const workbook = XLSX.read(data, { type: "array" });
+    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+    const json = XLSX.utils.sheet_to_json(sheet);
+    renderizarTabela(json);
+    Swal.fire("✅ Importado", "Lista carregada do Excel.", "success");
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+async function resetarBanco() {
+  const confirm = await Swal.fire({
+    title: "Tem certeza?",
+    text: "Todos os dados ser\u00e3o apagados.",
+    icon: "warning",
+    showCancelButton: true,
+    confirmButtonText: "Sim, apagar",
+    cancelButtonText: "Cancelar"
+  });
+  if (confirm.isConfirmed) {
+    const res = await fetch("/api/listas/resetar", { method: "DELETE" });
+    if (res.ok) {
+      tabela.innerHTML = "";
+      Swal.fire("🗑️ Banco Limpo", "Todos os dados foram apagados.", "success");
+    } else {
+      Swal.fire("Erro", "Falha ao resetar banco.", "error");
+    }
+  }
+}
+
+function renderizarTabela(dados) {
   const headers = [
     "codigoMaterial", "nivel", "tipoEstrutura",
     "linha", "itemComponente", "qtdeMontagem",
     "unidadeMedida", "fatorSucata"
   ];
-
   const table = document.createElement("table");
   const thead = document.createElement("thead");
   const headerRow = document.createElement("tr");
@@ -103,11 +147,11 @@ async function carregarListaSalva() {
   const tbody = document.createElement("tbody");
   dados.forEach(item => {
     const row = document.createElement("tr");
-    headers.forEach(key => {
+    headers.forEach(h => {
       const td = document.createElement("td");
       const input = document.createElement("input");
       input.type = "text";
-      input.value = item[key] || "";
+      input.value = item[h] || "";
       td.appendChild(input);
       row.appendChild(td);
     });
@@ -117,8 +161,6 @@ async function carregarListaSalva() {
 
   tabela.innerHTML = "";
   tabela.appendChild(table);
-
-  Swal.fire("✅ Lista carregada!", `Foram carregadas ${dados.length} linha(s).`, "success");
 }
 
 function exportarLista() {
@@ -138,7 +180,6 @@ function exportarLista() {
       fatorSucata: cells[7]
     });
   });
-
   const ws = XLSX.utils.json_to_sheet(dados);
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "ListaIFS");

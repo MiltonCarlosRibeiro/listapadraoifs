@@ -1,34 +1,38 @@
 package br.com.pakmatic.listapadraoifs.controller;
 
 import br.com.pakmatic.listapadraoifs.model.ListaEntry;
+import br.com.pakmatic.listapadraoifs.repository.ListaRepository;
 import br.com.pakmatic.listapadraoifs.service.ListaService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 @RestController
 @RequestMapping("/api/listas")
-@CrossOrigin(origins = "*")
 public class ListaController {
 
-    private final ListaService service;
+    @Autowired
+    private ListaService listaService;
 
-    public ListaController(ListaService service) {
-        this.service = service;
-    }
+    @Autowired
+    private ListaRepository listaRepository;
 
     @PostMapping
-    public ListaEntry salvar(@RequestBody ListaEntry entry) {
-        return service.salvar(entry);
+    public ResponseEntity<ListaEntry> salvar(@RequestBody ListaEntry entry) {
+        ListaEntry salvo = listaService.salvar(entry);
+        return ResponseEntity.ok(salvo);
     }
 
     @GetMapping
-    public List<ListaEntry> listar() {
-        return service.listarTudo();
+    public ResponseEntity<List<ListaEntry>> listarTodos() {
+        return ResponseEntity.ok(listaService.listarTodos());
     }
 
-    @DeleteMapping("/{id}")
-    public void deletar(@PathVariable Long id) {
-        service.deletar(id);
+    @DeleteMapping("/resetar")
+    public ResponseEntity<Void> resetarLista() {
+        listaRepository.deleteAll();
+        return ResponseEntity.ok().build();
     }
 }

@@ -2,6 +2,7 @@ package br.com.pakmatic.listapadraoifs.service;
 
 import br.com.pakmatic.listapadraoifs.model.ListaEntry;
 import br.com.pakmatic.listapadraoifs.repository.ListaRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -9,21 +10,14 @@ import java.util.List;
 @Service
 public class ListaService {
 
-    private final ListaRepository repository;
-
-    public ListaService(ListaRepository repository) {
-        this.repository = repository;
-    }
+    @Autowired
+    private ListaRepository listaRepository;
 
     public ListaEntry salvar(ListaEntry entry) {
-        return repository.save(entry);
+        return listaRepository.save(entry);
     }
 
-    public List<ListaEntry> listarTudo() {
-        return repository.findAll();
-    }
-
-    public void deletar(Long id) {
-        repository.deleteById(id);
+    public List<ListaEntry> listarTodos() {
+        return listaRepository.findAll();
     }
 }
