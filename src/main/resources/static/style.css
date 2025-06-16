@@ -83,13 +83,23 @@ th {
     font-size: 13px;
 }
 
-td input, td select {
+/* 👇 Separação do estilo para UPPER apenas nos inputs */
+td input {
     width: 100%;
     border: none;
     background: transparent;
     text-align: center;
     font-size: 13px;
     text-transform: uppercase;
+}
+
+td select {
+    width: 100%;
+    border: none;
+    background: transparent;
+    text-align: center;
+    font-size: 13px;
+    text-transform: none; /* mantém o texto original como 'un', 'cj', etc. */
 }
 
 .cards-container {
