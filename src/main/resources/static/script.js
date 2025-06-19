@@ -1,7 +1,6 @@
 let tabela = document.getElementById("listaTabela").getElementsByTagName("tbody")[0];
 let cacheCopiado = [];
 let seqAtivo = true;
-let seqCounter = 1;
 let corSelecionada = "";
 let pintarLinha = false;
 
@@ -66,7 +65,6 @@ function criarLinha(v = {}) {
 
     const seqTd = document.createElement("td");
     seqTd.classList.add("seq");
-    seqTd.textContent = seqCounter++;
     row.appendChild(seqTd);
 
     const nivelTd = document.createElement("td");
@@ -95,6 +93,24 @@ function criarLinha(v = {}) {
 
     aplicarIndentacao(row);
     tabela.appendChild(row);
+    atualizarSequencias();
+}
+
+function criarLinhaVazia() {
+    const dummy = document.createElement("tbody");
+    criarLinha();
+    dummy.appendChild(tabela.lastChild);
+    return dummy.removeChild(dummy.firstChild);
+}
+
+function atualizarSequencias() {
+    const linhas = tabela.querySelectorAll("tr");
+    linhas.forEach((row, index) => {
+        const seqTd = row.querySelector("td.seq");
+        if (seqTd) {
+            seqTd.textContent = (index + 1) * 10;
+        }
+    });
 }
 
 function ajustarNivel(row, delta) {
@@ -183,9 +199,9 @@ function verificarDuplicatas() {
     }
 }
 
+// EVENTOS
 document.getElementById("criarListaBtn").addEventListener("click", () => {
     tabela.innerHTML = "";
-    seqCounter = 1;
     criar10Linhas();
     Swal.fire("✅ Lista iniciada", "10 linhas criadas com sucesso!", "success");
 });
@@ -195,16 +211,51 @@ document.getElementById("continuarListaBtn").addEventListener("click", () => {
     Swal.fire("➕ Adicionado", "10 novas linhas foram inseridas.", "success");
 });
 
+document.getElementById("deletarSelecionadosBtn").addEventListener("click", () => {
+    document.querySelectorAll(".linha-selecao:checked").forEach(cb => cb.closest("tr").remove());
+    atualizarSequencias();
+    Swal.fire("🗑️ Removido", "Linhas selecionadas foram deletadas.", "success");
+});
+
+document.getElementById("inserirAcimaBtn").addEventListener("click", () => {
+    const selecionados = document.querySelectorAll(".linha-selecao:checked");
+    if (selecionados.length !== 1) return Swal.fire("⚠️ Selecione uma única linha", "Para inserir acima.", "info");
+
+    const row = selecionados[0].closest("tr");
+    const nova = criarLinhaVazia();
+    tabela.insertBefore(nova, row);
+    atualizarSequencias();
+    Swal.fire("⬆️ Linha inserida", "Nova linha foi adicionada acima.", "success");
+});
+
+document.getElementById("inserirAbaixoBtn").addEventListener("click", () => {
+    const selecionados = document.querySelectorAll(".linha-selecao:checked");
+    if (selecionados.length !== 1) return Swal.fire("⚠️ Selecione uma única linha", "Para inserir abaixo.", "info");
+
+    const row = selecionados[0].closest("tr");
+    const nova = criarLinhaVazia();
+    tabela.insertBefore(nova, row.nextSibling);
+    atualizarSequencias();
+    Swal.fire("⬇️ Linha inserida", "Nova linha foi adicionada abaixo.", "success");
+});
+
 document.getElementById("copiarSelecionadoBtn").addEventListener("click", () => {
     const selecionados = document.querySelectorAll(".linha-selecao:checked");
-    if (selecionados.length === 0) return Swal.fire("⚠️ Nada selecionado", "Marque uma linha.", "info");
+    if (selecionados.length === 0) {
+        Swal.fire("⚠️ Nada selecionado", "Marque uma linha.", "info");
+        return;
+    }
+
     cacheCopiado = Array.from(selecionados).map(cb => getLinhaData(cb.closest("tr")));
-    Swal.fire("📋 Copiado", `${cacheCopiado.length} linha(s) armazenada(s).`, "success");
+    Swal.fire("📋 Copiado", `${cacheCopiado.length} linha(s) copiadas.`, "success");
 });
 
 document.getElementById("colarBtn").addEventListener("click", () => {
     const selecionados = document.querySelectorAll(".linha-selecao:checked");
-    if (selecionados.length !== 1) return Swal.fire("⚠️ Selecione uma única linha como referência.", "", "info");
+    if (selecionados.length !== 1) {
+        Swal.fire("⚠️ Selecione uma linha", "Use uma linha como referência para colar.", "info");
+        return;
+    }
 
     const trBase = selecionados[0].closest("tr");
     let index = Array.from(tabela.rows).indexOf(trBase);
@@ -218,29 +269,9 @@ document.getElementById("colarBtn").addEventListener("click", () => {
         preencherLinha(row, linha);
     });
 
+    atualizarSequencias();
     verificarDuplicatas();
-});
-
-document.getElementById("deletarSelecionadosBtn").addEventListener("click", () => {
-    document.querySelectorAll(".linha-selecao:checked").forEach(cb => cb.closest("tr").remove());
-});
-
-document.getElementById("inserirAcimaBtn").addEventListener("click", () => {
-    const selecionados = document.querySelectorAll(".linha-selecao:checked");
-    if (selecionados.length !== 1) return Swal.fire("⚠️ Selecione uma única linha", "Para inserir acima, selecione apenas uma.", "info");
-
-    const row = selecionados[0].closest("tr");
-    const nova = criarLinhaVazia();
-    tabela.insertBefore(nova, row);
-});
-
-document.getElementById("inserirAbaixoBtn").addEventListener("click", () => {
-    const selecionados = document.querySelectorAll(".linha-selecao:checked");
-    if (selecionados.length !== 1) return Swal.fire("⚠️ Selecione uma única linha", "Para inserir abaixo, selecione apenas uma.", "info");
-
-    const row = selecionados[0].closest("tr");
-    const nova = criarLinhaVazia();
-    tabela.insertBefore(nova, row.nextSibling);
+    Swal.fire("📥 Colado", "Conteúdo copiado foi inserido com sucesso.", "success");
 });
 
 document.getElementById("salvarListaBtn").addEventListener("click", () => {
@@ -255,69 +286,31 @@ document.getElementById("salvarListaBtn").addEventListener("click", () => {
 document.getElementById("inputFile").addEventListener("change", async (e) => {
     const file = e.target.files[0];
     if (!file) return;
+
     const data = await file.arrayBuffer();
     const workbook = XLSX.read(data, { type: "array" });
     const sheet = workbook.Sheets[workbook.SheetNames[0]];
     const json = XLSX.utils.sheet_to_json(sheet);
     tabela.innerHTML = "";
-    seqCounter = 1;
-    json.forEach(row => criarLinha({
-        SITE: row.SITE,
-        ALTERNATIVA: row.ALTERNATIVA,
-        CODIGO_MATERIAL: row["CÓDIGO_MATERIAL"] || row["CODIGO MATERIAL"],
-        NIVEL: row.NIVEL,
-        TIPO_ESTRUTURA: row["TIPO ESTRUTURA"],
-        LINHA: row.LINHA,
-        ITEM_COMPONENTE: row.ITEM_COMPONENTE,
-        QTDE_MONTAGEM: row.QTDE_MONTAGEM,
-        UNIDADE_MEDIDA: row["UNIDADE DE MEDIDA"],
-        FATOR_SUCATA: row.FATOR_SUCATA,
-    }));
+
+    json.forEach(row => {
+        const novaLinha = criarLinhaVazia();
+        preencherLinha(novaLinha, {
+            SITE: row.SITE,
+            ALTERNATIVA: row.ALTERNATIVA,
+            CODIGO_MATERIAL: row["CÓDIGO_MATERIAL"] || row["CODIGO MATERIAL"],
+            NIVEL: row.NIVEL,
+            TIPO_ESTRUTURA: row["TIPO ESTRUTURA"],
+            LINHA: row.LINHA,
+            ITEM_COMPONENTE: row.ITEM_COMPONENTE,
+            QTDE_MONTAGEM: row.QTDE_MONTAGEM,
+            UNIDADE_MEDIDA: row["UNIDADE DE MEDIDA"],
+            FATOR_SUCATA: row.FATOR_SUCATA
+        });
+        tabela.appendChild(novaLinha);
+    });
+
+    atualizarSequencias();
+    verificarDuplicatas();
     Swal.fire("✅ Lista carregada", "A tabela foi preenchida com sucesso.", "success");
-});
-
-function criarLinhaVazia() {
-    const dummy = document.createElement("tbody");
-    criarLinha();
-    dummy.appendChild(tabela.lastChild);
-    return dummy.removeChild(dummy.firstChild);
-}
-
-// Filtro por nível
-document.getElementById("filtroNivel").addEventListener("change", (e) => {
-    const nivelFiltro = e.target.value;
-    Array.from(tabela.rows).forEach(row => {
-        const nivel = row.querySelector(".nivel-select").value;
-        row.style.display = (!nivelFiltro || nivel === nivelFiltro) ? "" : "none";
-    });
-});
-
-// Toggle coluna SEQ
-document.getElementById("toggleSeqBtn").addEventListener("click", () => {
-    const thSeq = document.querySelector(".seq-col");
-    const tdSeqs = document.querySelectorAll("td.seq");
-    seqAtivo = !seqAtivo;
-    thSeq.classList.toggle("hidden", !seqAtivo);
-    tdSeqs.forEach(td => td.classList.toggle("hidden", !seqAtivo));
-});
-
-// Pintura com botão de cor
-document.querySelectorAll(".paint-btn").forEach(btn => {
-    btn.addEventListener("click", () => {
-        corSelecionada = btn.dataset.color;
-        pintarLinha = document.getElementById("paintFullRow").checked;
-        Swal.fire("🎨 Modo pintura ativo", "Clique sobre uma célula ou linha.", "info");
-    });
-});
-
-document.addEventListener("click", (e) => {
-    if (!corSelecionada) return;
-    if (e.target.tagName === "TD") {
-        if (pintarLinha) {
-            e.target.closest("tr").style.backgroundColor = corSelecionada;
-        } else {
-            e.target.style.backgroundColor = corSelecionada;
-        }
-        corSelecionada = "";
-    }
 });
