@@ -50,11 +50,14 @@ h1 {
     background-color: #5e35b1;
 }
 
-.copy-options {
-    margin-bottom: 10px;
+.copy-options,
+.table-controls,
+.color-labels {
+    margin-bottom: 12px;
     display: flex;
-    gap: 20px;
+    flex-wrap: wrap;
     align-items: center;
+    gap: 20px;
     font-weight: bold;
 }
 
@@ -83,7 +86,7 @@ th {
     font-size: 13px;
 }
 
-/* 👇 Separação do estilo para UPPER apenas nos inputs */
+/* Campos input e select */
 td input {
     width: 100%;
     border: none;
@@ -99,9 +102,62 @@ td select {
     background: transparent;
     text-align: center;
     font-size: 13px;
-    text-transform: none; /* mantém o texto original como 'un', 'cj', etc. */
+    text-transform: none;
 }
 
+/* Identação por nível */
+.nivel-1 { padding-left: 0px !important; }
+.nivel-2 { padding-left: 20px !important; }
+.nivel-3 { padding-left: 40px !important; }
+.nivel-4 { padding-left: 60px !important; }
+.nivel-5 { padding-left: 80px !important; }
+.nivel-6 { padding-left: 100px !important; }
+.nivel-7 { padding-left: 120px !important; }
+.nivel-8 { padding-left: 140px !important; }
+.nivel-9 { padding-left: 160px !important; }
+.nivel-10 { padding-left: 180px !important; }
+
+/* Coluna SEQ oculta */
+.seq-col.hidden,
+td.seq.hidden {
+    display: none;
+}
+
+/* Coluna de indentação */
+.indent-col {
+    width: 35px;
+}
+
+/* Botões de cor e label */
+.color-labels .color-button {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.color-labels .color-label {
+    border: 1px solid #ccc;
+    padding: 4px 6px;
+    font-size: 13px;
+    border-radius: 4px;
+    width: 200px;
+}
+
+.color-labels .paint-btn {
+    border: none;
+    padding: 6px 10px;
+    cursor: pointer;
+    background-color: #ccc;
+    border-radius: 4px;
+    font-weight: bold;
+}
+
+/* Régua ao passar mouse */
+tbody tr:hover {
+    background-color: #fff8dc !important; /* amarelo pastel claro */
+}
+
+/* Estilo de cards reutilizados */
 .cards-container {
     display: flex;
     gap: 20px;
@@ -121,37 +177,6 @@ td select {
     position: relative;
 }
 
-.code-card h3 {
-    margin-top: 0;
-    display: flex;
-    align-items: center;
-    font-size: 16px;
-    gap: 8px;
-}
-
-.code-card .add-card-btn {
-    position: absolute;
-    top: 14px;
-    right: 14px;
-    border: 1px solid #444;
-    padding: 2px 6px;
-    font-weight: bold;
-    border-radius: 4px;
-    background-color: #f5f5f5;
-    cursor: pointer;
-}
-
-.code-card .add-card-btn:hover {
-    background-color: #ddd;
-}
-
-.duplicado-box {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    margin-top: 10px;
-}
-
 .editable-pre {
     background-color: #ede7f6;
     border: 1px dashed #7e57c2;
@@ -163,14 +188,6 @@ td select {
     font-family: monospace;
     font-size: 13px;
     outline: none;
-}
-
-.editable-pre:focus {
-    box-shadow: 0 0 0 2px #9575cd;
-}
-
-.editable-pre::placeholder {
-    color: #999;
 }
 
 @media (max-width: 768px) {

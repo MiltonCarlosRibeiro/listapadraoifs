@@ -35,15 +35,55 @@
         <label><input type="checkbox" id="copiarConjuntoCheckbox"> Copiar Conjunto</label>
     </div>
 
+    <div class="table-controls">
+        <div class="nivel-filter">
+            <label for="filtroNivel">🔍 Filtro por Nível:</label>
+            <select id="filtroNivel">
+                <option value="">Todos</option>
+                <option value="1">Nível 1</option>
+                <option value="2">Nível 2</option>
+                <option value="3">Nível 3</option>
+                <option value="4">Nível 4</option>
+                <option value="5">Nível 5</option>
+                <option value="6">Nível 6</option>
+                <option value="7">Nível 7</option>
+                <option value="8">Nível 8</option>
+                <option value="9">Nível 9</option>
+                <option value="10">Nível 10</option>
+            </select>
+        </div>
+        <div class="seq-toggle">
+            <button id="toggleSeqBtn"><i class="bi bi-eye"></i> Exibir/Ocultar SEQ</button>
+        </div>
+    </div>
+
+    <div class="color-labels">
+        <div class="color-button">
+            <input type="text" value="🔵 Destacar Azul Claro" class="color-label" data-color="#d0ebff">
+            <button class="paint-btn" data-color="#d0ebff">🎨</button>
+        </div>
+        <div class="color-button">
+            <input type="text" value="🟢 Destacar Verde Claro" class="color-label" data-color="#d0f0c0">
+            <button class="paint-btn" data-color="#d0f0c0">🎨</button>
+        </div>
+        <div class="color-button">
+            <input type="text" value="🔷 Azul Médio" class="color-label" data-color="#add8e6">
+            <button class="paint-btn" data-color="#add8e6">🎨</button>
+        </div>
+        <label><input type="checkbox" id="paintFullRow"> Pintar linha inteira</label>
+    </div>
+
     <div class="table-container">
         <table id="listaTabela">
             <thead>
             <tr>
                 <th></th> <!-- Checkbox -->
+                <th class="indent-col">⇅</th> <!-- Botões ➕➖ -->
+                <th class="seq-col">SEQ</th>
+                <th>NÍVEL</th>
                 <th>SITE</th>
                 <th>ALTERNATIVA</th>
                 <th>CÓDIGO_MATERIAL</th>
-                <th>NÍVEL</th>
                 <th>TIPO ESTRUTURA</th>
                 <th>LINHA</th>
                 <th>ITEM_COMPONENTE</th>
@@ -53,12 +93,13 @@
             </tr>
             </thead>
             <tbody>
-            <!-- Linhas dinâmicas -->
+            <!-- Linhas serão inseridas via script.js -->
             </tbody>
         </table>
     </div>
 </div>
 
+<!-- ⚠️ Aqui estava o erro: esta linha deve estar PRESENTE -->
 <script src="script.js"></script>
 </body>
 </html>
