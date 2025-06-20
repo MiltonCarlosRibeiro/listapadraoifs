@@ -2,9 +2,8 @@ let tabela = document.getElementById("listaTabela").getElementsByTagName("tbody"
 let cacheCopiado = [];
 let seqAtivo = true;
 let corSelecionada = "";
-// Renomeando a variável para refletir a nova checkbox
-let demarcarLinha = false; // Corresponde à checkbox "Demarcar linha"
-let removerDemarcacao = false; // Corresponde à nova checkbox "Remover demarcação"
+let demarcarLinha = false;
+let removerDemarcacao = false;
 
 
 const unidades = ["un", "cj", "kg", "mm", "m"];
@@ -38,7 +37,7 @@ function inputCell(type, readOnly = false, value = "", isPasteTarget = false) {
                 } else {
                     e.target.style.backgroundColor = corSelecionada; // Aplica a cor
                 }
-                corSelecionada = ""; // Limpa a cor após aplicar/remover
+                // corSelecionada NÃO É MAIS LIMPA AQUI para permitir demarcar várias
             }
         }
     });
@@ -56,7 +55,7 @@ function selectCell(options = [], selected = "", className = "") {
     const select = document.createElement("select");
     if (className) td.classList.add(className);
     options.forEach(opt => {
-        const option = document.createElement("option"); // CORRIGIDO: document.createElement("option")
+        const option = document.createElement("option");
         option.value = opt;
         option.textContent = opt;
         if (opt === selected) option.selected = true;
@@ -75,7 +74,7 @@ function selectCell(options = [], selected = "", className = "") {
                 } else {
                     e.target.style.backgroundColor = corSelecionada; // Aplica a cor
                 }
-                corSelecionada = ""; // Limpa a cor após aplicar/remover
+                // corSelecionada NÃO É MAIS LIMPA AQUI para permitir demarcar várias
             }
         }
     });
@@ -134,7 +133,7 @@ function criarLinha(v = {}) {
                 } else {
                     row.style.backgroundColor = corSelecionada; // Aplica a cor
                 }
-                corSelecionada = ""; // Limpa a cor após aplicar/remover
+                // corSelecionada NÃO É MAIS LIMPA AQUI para permitir demarcar várias
             }
         }
     });
@@ -145,7 +144,8 @@ function criarLinha(v = {}) {
     row.appendChild(selectCell(tiposEstrutura, v.TIPO_ESTRUTURA || "Manufatura"));
     row.appendChild(selectCell(linhaValores, v.LINHA || "10"));
     row.appendChild(inputCell("text", false, v.ITEM_COMPONENTE || "", true));
-    row.appendChild(inputCell("number", false, v.QTDE_MONTAGEM || "0"));
+    // QTDE_MONTAGEM agora é tipo "text" e paste target
+    row.appendChild(inputCell("text", false, v.QTDE_MONTAGEM || "0", true)); // Alterado para type="text" e isPasteTarget = true
     row.appendChild(selectCell(unidades, v.UNIDADE_MEDIDA || "un"));
     row.appendChild(selectCell(fatorSucata, v.FATOR_SUCATA || "0"));
 
@@ -236,7 +236,9 @@ function verificarDuplicatas() {
 
     linhas.forEach(row => {
         // Apenas reseta cores de fundo de duplicata se não for uma cor de demarcação manual
-        if (row.style.backgroundColor === "rgb(240, 230, 255)" || row.style.backgroundColor === "rgb(217, 194, 255)") { // Converte para RGB para comparação
+        const currentColor = row.style.backgroundColor;
+        const demarcationColors = ["rgb(208, 235, 255)", "rgb(208, 240, 192)", "rgb(173, 216, 230)", "rgb(255, 204, 204)"];
+        if (currentColor === "rgb(240, 230, 255)" || currentColor === "rgb(217, 194, 255)") { // Cores de duplicata
             row.style.backgroundColor = "";
         }
     });
@@ -259,7 +261,9 @@ function verificarDuplicatas() {
     for (const [hash, rows] of hashes) {
         if (rows.length > 1) {
             rows.forEach(row => {
-                if (!["#d0ebff", "#d0f0c0", "#add8e6", "#ffcccc"].includes(row.style.backgroundColor)) { // Não sobrescreve cores de demarcação manual
+                const currentColor = row.style.backgroundColor;
+                const demarcationColors = ["rgb(208, 235, 255)", "rgb(208, 240, 192)", "rgb(173, 216, 230)", "rgb(255, 204, 204)"];
+                if (!demarcationColors.includes(currentColor)) { // Não sobrescreve cores de demarcação manual
                      row.style.backgroundColor = "#f0e6ff"; // Roxo claro
                 }
             });
@@ -269,7 +273,9 @@ function verificarDuplicatas() {
     for (const [groupHash, rows] of conjuntos) {
         if (rows.length > 1) {
             rows.forEach(row => {
-                if (row.style.backgroundColor !== "#f0e6ff" && !["#d0ebff", "#d0f0c0", "#add8e6", "#ffcccc"].includes(row.style.backgroundColor)) {
+                const currentColor = row.style.backgroundColor;
+                const demarcationColors = ["rgb(208, 235, 255)", "rgb(208, 240, 192)", "rgb(173, 216, 230)", "rgb(255, 204, 204)"];
+                if (currentColor !== "rgb(240, 230, 255)" && !demarcationColors.includes(currentColor)) {
                     row.style.backgroundColor = "#d9c2ff"; // Roxo médio
                 }
             });
@@ -559,10 +565,13 @@ async function handlePasteMultipleLines(event) {
     const rowIndex = Array.from(tabela.rows).indexOf(tr);
 
     let columnIndex = -1;
+    // Identifica qual coluna está sendo colada (CODIGO_MATERIAL ou ITEM_COMPONENTE ou QTDE_MONTAGEM)
     if (td === tr.querySelectorAll("td")[6]) {
         columnIndex = 6;
     } else if (td === tr.querySelectorAll("td")[9]) {
         columnIndex = 9;
+    } else if (td === tr.querySelectorAll("td")[10]) { // Adicionado para QTDE_MONTAGEM
+        columnIndex = 10;
     } else {
         return;
     }
