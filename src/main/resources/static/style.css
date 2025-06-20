@@ -281,6 +281,7 @@ th:nth-child(12), td:nth-child(12) { /* FATOR_SUCATA (12ª coluna) */
 /* Adicione mais níveis se necessário, seguindo o padrão */
 
 /* Classe para o destaque de duplicatas (roxo claro) */
+/* ALTERAÇÃO: Adicionado !important para que esta cor sobreponha as cores de nível */
 .highlight-duplicate {
     background-color: #f0e6ff !important; /* Lavender Blush */
 }

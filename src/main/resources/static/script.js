@@ -225,7 +225,8 @@ function criarLinha(v = {}) {
     row.appendChild(selectCell(tiposEstrutura, v.TIPO_ESTRUTURA || "Manufatura"));
     row.appendChild(selectCell(linhaValores, v.LINHA || "10"));
     row.appendChild(inputCell("text", false, v.ITEM_COMPONENTE || "", true));
-    row.appendChild(inputCell("text", false, v.QTDE_MONTAGEM || "0", true));
+    // ALTERAÇÃO: QTDE_MONTAGEM inicia vazio
+    row.appendChild(inputCell("text", false, v.QTDE_MONTAGEM || "")); // Alterado para vazio
     row.appendChild(selectCell(unidades, v.UNIDADE_MEDIDA || "un"));
     row.appendChild(selectCell(fatorSucata, v.FATOR_SUCATA || "0"));
 
@@ -303,7 +304,8 @@ function preencherLinha(row, data) {
     cells[6].querySelector("select").value = data.TIPO_ESTRUTURA || "Manufatura";
     cells[7].querySelector("select").value = data.LINHA || "10";
     cells[8].querySelector("input").value = (data.ITEM_COMPONENTE || "").toUpperCase();
-    cells[9].querySelector("input").value = (data.QTDE_MONTAGEM || "0").replace(",", ".");
+    // ALTERAÇÃO: QTDE_MONTAGEM preenchimento. Se for "0", deixa vazio.
+    cells[9].querySelector("input").value = (data.QTDE_MONTAGEM === "0" ? "" : data.QTDE_MONTAGEM || "").replace(",", ".");
     cells[10].querySelector("select").value = data.UNIDADE_MEDIDA || "un";
     cells[11].querySelector("select").value = data.FATOR_SUCATA || "0";
 }
@@ -311,18 +313,10 @@ function preencherLinha(row, data) {
 function verificarDuplicatas() {
     const linhas = Array.from(tabela.rows);
     const hashes = new Map();
-    // Cores de atenção e de nível para evitar sobrescrita
-    const protectedColors = new Set([
-        "#FFBF00", "#28A745", "#DC3545", // Cores de atenção
-        ...nivelColors // Cores de nível
-    ].map(c => c.toUpperCase()));
 
-    // Primeiro, remove a cor de duplicidade de todas as linhas
+    // Primeiro, remove a classe de duplicidade de todas as linhas
     linhas.forEach(row => {
-        const currentColor = rgbToHex(row.style.backgroundColor);
-        if (currentColor === "#F0E6FF") { // Cor roxa clara de duplicidade
-            row.style.backgroundColor = "";
-        }
+        row.classList.remove("highlight-duplicate");
     });
 
     if (ignorarDuplicatas) {
@@ -335,7 +329,8 @@ function verificarDuplicatas() {
 
         if (data.CODIGO_MATERIAL === "" && data.ITEM_COMPONENTE === "") return;
 
-        const hash = `${data.SITE}|${data.ALTERNATIVA}|${data.CODIGO_MATERIAL}|${data.NIVEL}|${data.TIPO_ESTRUTURA}|${data.LINHA}|${data.ITEM_COMPONENTE}|${data.QTDE_MONTAGEM}|${data.UNIDADE_MEDIDA}|${data.FATOR_SUCATA}`;
+        // ALTERAÇÃO: QTDE_MONTAGEM removido do hash para ignorá-lo na verificação de duplicatas
+        const hash = `${data.SITE}|${data.ALTERNATIVA}|${data.CODIGO_MATERIAL}|${data.NIVEL}|${data.TIPO_ESTRUTURA}|${data.LINHA}|${data.ITEM_COMPONENTE}|${data.UNIDADE_MEDIDA}|${data.FATOR_SUCATA}`;
 
         if (!hashes.has(hash)) hashes.set(hash, []);
         hashes.get(hash).push(tr);
@@ -344,11 +339,8 @@ function verificarDuplicatas() {
     for (const [hash, rows] of hashes) {
         if (rows.length > 1) {
             rows.forEach(row => {
-                const currentColor = rgbToHex(row.style.backgroundColor);
-                // Aplica a cor de duplicidade APENAS se a linha não tiver uma cor protegida
-                if (!protectedColors.has(currentColor)) {
-                    row.style.backgroundColor = "#f0e6ff"; // Cor roxa clara
-                }
+                // ALTERAÇÃO: Adiciona a classe diretamente. CSS cuidará da precedência com !important.
+                row.classList.add("highlight-duplicate");
             });
         }
     }
@@ -464,6 +456,16 @@ document.getElementById("colarBtn").addEventListener("click", () => {
     const trBase = selecionados[0].closest("tr");
     let index = Array.from(tabela.rows).indexOf(trBase);
 
+    // ALTERAÇÃO: Adicionar SweetAlert antes de colar
+    Swal.fire({
+        title: "Colando dados...",
+        text: `Serão colados ${cacheCopiado.length} itens a partir da linha ${index + 1}.`,
+        allowOutsideClick: false,
+        didOpen: () => {
+            Swal.showLoading();
+        }
+    });
+
     cacheCopiado.forEach((linhaData, i) => {
         let targetRow = tabela.rows[index + i];
         if (!targetRow) {
@@ -531,7 +533,8 @@ document.getElementById("inputFile").addEventListener("change", async (e) => {
                 TIPO_ESTRUTURA: rowData["TIPO ESTRUTURA"] || rowData.Tipo_Estrutura || rowData.TipoEstrutura || "Manufatura",
                 LINHA: String(rowData.LINHA || rowData.Linha || "10"),
                 ITEM_COMPONENTE: rowData.ITEM_COMPONENTE || rowData.Item_Componente || rowData.ItemComponente || "",
-                QTDE_MONTAGEM: String(rowData.QTDE_MONTAGEM || rowData.Qtde_Montagem || rowData.QtdeMontagem || "0"),
+                // ALTERAÇÃO: Se QTDE_MONTAGEM vier como "0" na importação, deixa vazio.
+                QTDE_MONTAGEM: String(rowData.QTDE_MONTAGEM || rowData.Qtde_Montagem || rowData.QtdeMontagem || ""),
                 UNIDADE_MEDIDA: rowData["UNIDADE DE MEDIDA"] || rowData.Unidade_Medida || rowData.UnidadeMedida || "un",
                 FATOR_SUCATA: String(rowData.FATOR_SUCATA || rowData.Fator_Sucata || rowData.FatorSucata || "0")
             };
@@ -621,14 +624,18 @@ document.getElementById("clearPaintBtn").addEventListener("click", () => {
     const allCells = tabela.querySelectorAll("td");
     const allRows = tabela.querySelectorAll("tr");
     allCells.forEach(cell => cell.style.backgroundColor = "");
-    allRows.forEach(row => row.style.backgroundColor = "");
+    // Remove a classe de duplicidade para garantir que todas as cores são limpas
+    allRows.forEach(row => {
+        row.style.backgroundColor = "";
+        row.classList.remove("highlight-duplicate");
+    });
 
     Swal.fire("Seleção de cor limpa e demarcações removidas!", "Agora o clique não aplicará cores e todas as demarcações foram apagadas.", "info", 2500);
 });
 
 document.getElementById("ignorarDuplicatasCheckbox").addEventListener("change", function() {
     ignorarDuplicatas = this.checked;
-    verificarDuplicatas();
+    verificarDuplicatas(); // Recalcula e aplica/remove o destaque
     if (ignorarDuplicatas) {
         Swal.fire("Destaque de duplicatas desativado!", "As linhas duplicadas não serão mais destacadas com roxo claro.", "info", 2000);
     } else {
@@ -734,9 +741,26 @@ async function handlePasteMultipleLines(event) {
         return;
     }
 
+    // ALTERAÇÃO: SweetAlert de confirmação com a quantidade de itens.
+    const result = await Swal.fire({
+        title: "Confirmar colagem?",
+        text: `Você está prestes a colar ${lines.length} item(ns).`,
+        icon: "question",
+        showCancelButton: true,
+        confirmButtonColor: "#3085d6",
+        cancelButtonColor: "#d33",
+        confirmButtonText: "Sim, colar!",
+        cancelButtonText: "Cancelar"
+    });
+
+    if (!result.isConfirmed) {
+        Swal.fire("Colagem cancelada", "", "info");
+        return;
+    }
+
     Swal.fire({
         title: "Colando dados...",
-        text: `Serão colados ${lines.length} itens a partir da linha ${rowIndex + 1}.`,
+        text: "Por favor, aguarde.",
         allowOutsideClick: false,
         didOpen: () => {
             Swal.showLoading();
