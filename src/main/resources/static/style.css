@@ -7,7 +7,7 @@ body {
 }
 
 .container {
-    max-width: 1400px; /* Mantém o valor original */
+    max-width: 1900px; /* Mantém o valor original */
     margin: auto;
 }
 
@@ -23,7 +23,7 @@ header {
 }
 
 h1 {
-    font-size: 24px;
+    font-size: 30px;
 }
 
 .button-bar {
@@ -175,7 +175,7 @@ td select {
     box-sizing: border-box;
     border: 1px solid #ccc;
     border-radius: 4px;
-    font-size: 14px;
+    font-size: 10px;
 }
 
 td input[type="text"]:focus,
