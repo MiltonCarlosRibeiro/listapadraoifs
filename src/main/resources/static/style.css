@@ -175,7 +175,7 @@ td select {
     box-sizing: border-box;
     border: 1px solid #ccc;
     border-radius: 4px;
-    font-size: 10px;
+    font-size: 13px;
 }
 
 td input[type="text"]:focus,
