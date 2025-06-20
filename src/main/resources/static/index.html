@@ -25,73 +25,45 @@
         <button id="salvarListaBtn">💾 Salvar Lista</button>
         <button id="copiarSelecionadoBtn">📋 Copiar Selecionado</button>
         <button id="colarBtn">📥 Colar</button>
-        <button id="deletarSelecionadosBtn">🗑️ Deletar Linha</button>
+        <button id="deletarSelecionadosBtn">🗑️ Deletar Selecionados</button>
         <button id="inserirAcimaBtn">⬆️ Inserir Acima</button>
         <button id="inserirAbaixoBtn">⬇️ Inserir Abaixo</button>
+        <button id="toggleSeqBtn">👁️ SEQ</button>
+        <button id="toggleNivelColBtn">👁️ NÍVEL</button>
+        <button id="toggleHoverEffectBtn">📏 Régua</button>
+    </div>
 
-        <label><input type="checkbox" id="demarcarLinhaCheckbox"> Demarcar Linha</label>
-        <label><input type="checkbox" id="removerDemarcacaoCheckbox"> Remover Demarcação</label>
+    <div class="painting-controls">
+        <h3>🎨 Ferramentas de Demarcação</h3>
+        <div id="nivelColorButtons">
+        </div>
+        <div id="attentionColorButtons">
+            <button class="paint-btn attention-yellow" data-color="#FFBF00">🟡 Atenção</button>
+            <button class="paint-btn attention-green" data-color="#28A745">🟢 OK</button>
+            <button class="paint-btn attention-red" data-color="#DC3545">🔴 Crítico</button>
+        </div>
         <button id="clearPaintBtn">🚫 Limpar Seleção de Cor</button>
+        <label><input type="checkbox" id="demarcarLinhaCheckbox"> Demarcar linha</label>
+        <label><input type="checkbox" id="removerDemarcacaoCheckbox"> Remover demarcação</label>
         <label><input type="checkbox" id="ignorarDuplicatasCheckbox"> Ignorar destaque de duplicatas</label>
-        <label><input type="checkbox" id="toggleAllCheckboxes"> Marcar/Desmarcar Todos</label>
+        <label><input type="checkbox" id="toggleAllCheckboxesHeader"> Marcar/Desmarcar Todos</label>
     </div>
 
-    <div class="color-options-container">
-        <div class="color-section">
-            <label class="section-title">Cores de Nível (1-10)</label>
-            <div class="color-buttons-grid" id="nivelColorButtons">
-            </div>
+    <div class="filter-controls">
+        <h3>🔍 Filtrar por Nível</h3>
+        <div id="checkboxNiveis">
         </div>
-
-        <div class="color-section">
-            <label class="section-title">Cores de Atenção</label>
-            <div class="color-buttons-attention" id="attentionColorButtons">
-                <div class="color-button">
-                    <button class="paint-btn" data-color="#ffffe0" data-type="attention">🎨</button>
-                    <span class="color-label">Atenção</span>
-                </div>
-                <div class="color-button">
-                    <button class="paint-btn" data-color="#d0f0c0" data-type="attention">🎨</button>
-                    <span class="color-label">OK</span>
-                </div>
-                <div class="color-button">
-                    <button class="paint-btn" data-color="#ffcccc" data-type="attention">🎨</button>
-                    <span class="color-label">Crítico</span>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="table-controls">
-        <div class="nivel-filter">
-            <label>🔍 Filtro por Nível:</label>
-            <div id="checkboxNiveis" class="checkbox-niveis">
-                <label><input type="checkbox" value="1"> 1</label>
-                <label><input type="checkbox" value="2"> 2</label>
-                <label><input type="checkbox" value="3"> 3</label>
-                <label><input type="checkbox" value="4"> 4</label>
-                <label><input type="checkbox" value="5"> 5</label>
-                <label><input type="checkbox" value="6"> 6</label>
-                <label><input type="checkbox" value="7"> 7</label>
-                <label><input type="checkbox" value="8"> 8</label>
-                <label><input type="checkbox" value="9"> 9</label>
-                <label><input type="checkbox" value="10"> 10</label>
-            </div>
-            <button id="limparFiltroNivelBtn">Limpar Filtro</button>
-        </div>
-
-        <div class="col-toggle">
-            <button id="toggleSeqBtn"><i class="bi bi-eye"></i> Exibir/Ocultar SEQ</button>
-            <button id="toggleNivelColBtn"><i class="bi bi-eye"></i> Exibir/Ocultar NÍVEL</button>
-        </div>
+        <button id="limparFiltroNivelBtn">Limpar Filtro</button>
     </div>
 
     <div class="table-container">
         <table id="listaTabela">
             <thead>
             <tr>
-                <th><input type="checkbox" id="toggleAllCheckboxesHeader"></th>
-                <th class="seq-col">SEQ</th> <th class="nivel-col">NÍVEL</th> <th>SITE</th>
+                <th><input type="checkbox" id="toggleAllCheckboxes"></th>
+                <th class="seq-col">SEQ</th>
+                <th class="nivel-col">NÍVEL</th>
+                <th>SITE</th>
                 <th>ALTERNATIVA</th>
                 <th>CÓDIGO_MATERIAL</th>
                 <th>TIPO ESTRUTURA</th>
