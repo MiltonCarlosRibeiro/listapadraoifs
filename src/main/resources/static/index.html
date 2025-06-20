@@ -37,21 +37,22 @@
 
     <div class="table-controls">
         <div class="nivel-filter">
-            <label for="filtroNivel">🔍 Filtro por Nível:</label>
-            <select id="filtroNivel">
-                <option value="">Todos</option>
-                <option value="1">Nível 1</option>
-                <option value="2">Nível 2</option>
-                <option value="3">Nível 3</option>
-                <option value="4">Nível 4</option>
-                <option value="5">Nível 5</option>
-                <option value="6">Nível 6</option>
-                <option value="7">Nível 7</option>
-                <option value="8">Nível 8</option>
-                <option value="9">Nível 9</option>
-                <option value="10">Nível 10</option>
-            </select>
+            <label>🔍 Filtro por Nível:</label>
+            <div id="checkboxNiveis" class="checkbox-niveis">
+                <label><input type="checkbox" value="1"> 1</label>
+                <label><input type="checkbox" value="2"> 2</label>
+                <label><input type="checkbox" value="3"> 3</label>
+                <label><input type="checkbox" value="4"> 4</label>
+                <label><input type="checkbox" value="5"> 5</label>
+                <label><input type="checkbox" value="6"> 6</label>
+                <label><input type="checkbox" value="7"> 7</label>
+                <label><input type="checkbox" value="8"> 8</label>
+                <label><input type="checkbox" value="9"> 9</label>
+                <label><input type="checkbox" value="10"> 10</label>
+            </div>
+            <button id="limparFiltroNivelBtn">Limpar Filtro</button>
         </div>
+
         <div class="seq-toggle">
             <button id="toggleSeqBtn"><i class="bi bi-eye"></i> Exibir/Ocultar SEQ</button>
         </div>
@@ -59,15 +60,15 @@
 
     <div class="color-labels">
         <div class="color-button">
-            <input type="text" value="🔵 Destacar Azul Claro" class="color-label" data-color="#d0ebff">
+            <input type="text" value="🔵 Destacar Azul Claro" class="color-label" data-color="#d0ebff" readonly>
             <button class="paint-btn" data-color="#d0ebff">🎨</button>
         </div>
         <div class="color-button">
-            <input type="text" value="🟢 Destacar Verde Claro" class="color-label" data-color="#d0f0c0">
+            <input type="text" value="🟢 Destacar Verde Claro" class="color-label" data-color="#d0f0c0" readonly>
             <button class="paint-btn" data-color="#d0f0c0">🎨</button>
         </div>
         <div class="color-button">
-            <input type="text" value="🔷 Azul Médio" class="color-label" data-color="#add8e6">
+            <input type="text" value="🔷 Azul Médio" class="color-label" data-color="#add8e6" readonly>
             <button class="paint-btn" data-color="#add8e6">🎨</button>
         </div>
         <label><input type="checkbox" id="paintFullRow"> Pintar linha inteira</label>
@@ -77,9 +78,7 @@
         <table id="listaTabela">
             <thead>
             <tr>
-                <th></th> <!-- Checkbox -->
-                <th class="indent-col">⇅</th> <!-- Botões ➕➖ -->
-                <th class="seq-col">SEQ</th>
+                <th><input type="checkbox" id="toggleAllCheckboxes"></th> <th class="indent-col">⇅</th> <th class="seq-col">SEQ</th>
                 <th>NÍVEL</th>
                 <th>SITE</th>
                 <th>ALTERNATIVA</th>
@@ -93,13 +92,11 @@
             </tr>
             </thead>
             <tbody>
-            <!-- Linhas serão inseridas via script.js -->
             </tbody>
         </table>
     </div>
 </div>
 
-<!-- ⚠️ Aqui estava o erro: esta linha deve estar PRESENTE -->
 <script src="script.js"></script>
-</body>
+<script src="filtro_nivel.js"></script> </body>
 </html>
