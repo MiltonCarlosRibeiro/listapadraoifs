@@ -29,31 +29,37 @@
         <button id="inserirAcimaBtn">⬆️ Inserir Acima</button>
         <button id="inserirAbaixoBtn">⬇️ Inserir Abaixo</button>
 
-        <div class="color-button">
-            <input type="text" value="🟡 Destacar Amarelo" class="color-label" data-color="#ffffe0" readonly>
-            <button class="paint-btn" data-color="#ffffe0">🎨</button>
-        </div>
-        <div class="color-button">
-            <input type="text" value="🔵 Destacar Azul Claro" class="color-label" data-color="#e0ffff" readonly>
-            <button class="paint-btn" data-color="#e0ffff">🎨</button>
-        </div>
-        <div class="color-button">
-            <input type="text" value="🟢 Destacar Verde Claro" class="color-label" data-color="#d0f0c0" readonly>
-            <button class="paint-btn" data-color="#d0f0c0">🎨</button>
-        </div>
-        <div class="color-button">
-            <input type="text" value="🔷 Azul Médio" class="color-label" data-color="#add8e6" readonly>
-            <button class="paint-btn" data-color="#add8e6">🎨</button>
-        </div>
-        <div class="color-button">
-            <input type="text" value="🔴 Vermelho Claro" class="color-label" data-color="#ffcccc" readonly>
-            <button class="paint-btn" data-color="#ffcccc">🎨</button>
-        </div>
+        <label><input type="checkbox" id="demarcarLinhaCheckbox"> Demarcar Linha</label>
+        <label><input type="checkbox" id="removerDemarcacaoCheckbox"> Remover Demarcação</label>
         <button id="clearPaintBtn">🚫 Limpar Seleção de Cor</button>
-        <label><input type="checkbox" id="demarcarLinhaCheckbox"> Demarcar linha</label>
-        <label><input type="checkbox" id="removerDemarcacaoCheckbox"> Remover demarcação</label>
         <label><input type="checkbox" id="ignorarDuplicatasCheckbox"> Ignorar destaque de duplicatas</label>
         <label><input type="checkbox" id="toggleAllCheckboxes"> Marcar/Desmarcar Todos</label>
+    </div>
+
+    <div class="color-options-container">
+        <div class="color-section">
+            <label class="section-title">Cores de Nível (1-10)</label>
+            <div class="color-buttons-grid" id="nivelColorButtons">
+            </div>
+        </div>
+
+        <div class="color-section">
+            <label class="section-title">Cores de Atenção</label>
+            <div class="color-buttons-attention" id="attentionColorButtons">
+                <div class="color-button">
+                    <button class="paint-btn" data-color="#ffffe0" data-type="attention">🎨</button>
+                    <span class="color-label">Atenção</span>
+                </div>
+                <div class="color-button">
+                    <button class="paint-btn" data-color="#d0f0c0" data-type="attention">🎨</button>
+                    <span class="color-label">OK</span>
+                </div>
+                <div class="color-button">
+                    <button class="paint-btn" data-color="#ffcccc" data-type="attention">🎨</button>
+                    <span class="color-label">Crítico</span>
+                </div>
+            </div>
+        </div>
     </div>
 
     <div class="table-controls">
@@ -74,8 +80,9 @@
             <button id="limparFiltroNivelBtn">Limpar Filtro</button>
         </div>
 
-        <div class="seq-toggle">
+        <div class="col-toggle">
             <button id="toggleSeqBtn"><i class="bi bi-eye"></i> Exibir/Ocultar SEQ</button>
+            <button id="toggleNivelColBtn"><i class="bi bi-eye"></i> Exibir/Ocultar NÍVEL</button>
         </div>
     </div>
 
@@ -84,9 +91,7 @@
             <thead>
             <tr>
                 <th><input type="checkbox" id="toggleAllCheckboxesHeader"></th>
-                <th class="nivel-col">NÍVEL</th>
-                <th class="seq-col">SEQ</th>
-                <th>SITE</th>
+                <th class="seq-col">SEQ</th> <th class="nivel-col">NÍVEL</th> <th>SITE</th>
                 <th>ALTERNATIVA</th>
                 <th>CÓDIGO_MATERIAL</th>
                 <th>TIPO ESTRUTURA</th>

@@ -1,10 +1,25 @@
 let tabela = document.getElementById("listaTabela").getElementsByTagName("tbody")[0];
 let cacheCopiado = [];
 let seqAtivo = true; // SEQ estará visível por padrão
-let corSelecionada = "";
-let demarcarLinha = false;
-let removerDemarcacao = false;
-let ignorarDuplicatas = false;
+let nivelColVisivel = true; // Nível estará visível por padrão
+let corSelecionada = ""; // Cor hex (#RRGGBB) para aplicar
+let demarcarLinha = false; // true: clica na linha, false: clica na célula
+let removerDemarcacao = false; // true: cliques removem cores, false: cliques aplicam cores
+let ignorarDuplicatas = false; // Nova variável para ignorar destaque de duplicatas
+
+// Definição das cores para os níveis
+const nivelColors = [
+    "#ffe0b2", // Nível 1 - Pastel
+    "#bfefbb", // Nível 2 - Pastel
+    "#c0d9ef", // Nível 3 - Pastel
+    "#e6b2e6", // Nível 4 - Pastel
+    "#ffe0e0", // Nível 5 - Pastel
+    "#a7d9b5", // Nível 6 - Pastel
+    "#d5e6a7", // Nível 7 - Pastel
+    "#b2e0e0", // Nível 8 - Pastel
+    "#e0b2a7", // Nível 9 - Pastel
+    "#a7b5d9"  // Nível 10 - Pastel
+];
 
 const unidades = ["un", "cj", "kg", "mm", "m"];
 const tiposEstrutura = ["Manufatura", "Comprado", ""];
@@ -32,24 +47,6 @@ function inputCell(type, readOnly = false, value = "", isPasteTarget = false, cl
         }
     });
 
-    input.addEventListener("click", (e) => {
-        if (!demarcarLinha) {
-            if (removerDemarcacao) {
-                e.target.style.backgroundColor = "";
-            } else if (corSelecionada) {
-                if (e.target.style.backgroundColor === corSelecionada) {
-                    e.target.style.backgroundColor = "";
-                } else {
-                    e.target.style.backgroundColor = corSelecionada;
-                }
-            }
-        }
-    });
-
-    if (isPasteTarget) {
-        input.addEventListener("paste", handlePasteMultipleLines);
-    }
-
     td.appendChild(input);
     return td;
 }
@@ -66,19 +63,6 @@ function selectCell(options = [], selected = "", className = "") {
         select.appendChild(option);
     });
     select.addEventListener("change", verificarDuplicatas);
-    select.addEventListener("click", (e) => {
-        if (!demarcarLinha) {
-            if (removerDemarcacao) {
-                e.target.style.backgroundColor = "";
-            } else if (corSelecionada) {
-                if (e.target.style.backgroundColor === corSelecionada) {
-                    e.target.style.backgroundColor = "";
-                } else {
-                    e.target.style.backgroundColor = corSelecionada;
-                }
-            }
-        }
-    });
     td.appendChild(select);
     return td;
 }
@@ -93,23 +77,32 @@ function criarLinha(v = {}) {
     checkboxTd.appendChild(checkbox);
     row.appendChild(checkboxTd);
 
-    // Nível agora é um input de texto e a primeira coluna de dados
-    const nivelCell = inputCell("text", false, v.NIVEL || "", true, "nivel-col"); // Inicia vazio
-    row.appendChild(nivelCell);
-
+    // SEQ agora é a primeira coluna de dados (índice 1 no array de células)
     const seqTd = document.createElement("td");
     seqTd.classList.add("seq-col");
     row.appendChild(seqTd);
 
+    // Nível agora é a segunda coluna de dados (índice 2 no array de células)
+    const nivelCell = inputCell("text", false, v.NIVEL || "", true, "nivel-col");
+    row.appendChild(nivelCell);
+
+    // Event listener para demarcação da LINHA
     row.addEventListener("click", (e) => {
-        if (demarcarLinha && !e.target.tagName.match(/INPUT|SELECT|BUTTON/)) {
+        // Impede a demarcação se o clique for em input/select (para permitir digitação)
+        if (e.target.tagName.match(/INPUT|SELECT|BUTTON/)) {
+            return;
+        }
+
+        if (demarcarLinha) { // Modo de demarcação de linha
             if (removerDemarcacao) {
+                // Se removerDemarcacao estiver ON, sempre remove a cor
                 row.style.backgroundColor = "";
             } else if (corSelecionada) {
+                // Se corSelecionada estiver definida, aplica/remove essa cor
                 if (row.style.backgroundColor === corSelecionada) {
-                    row.style.backgroundColor = "";
+                    row.style.backgroundColor = ""; // Remove se já tiver a cor
                 } else {
-                    row.style.backgroundColor = corSelecionada;
+                    row.style.backgroundColor = corSelecionada; // Aplica a cor
                 }
             }
         }
@@ -125,13 +118,15 @@ function criarLinha(v = {}) {
     row.appendChild(selectCell(unidades, v.UNIDADE_MEDIDA || "un"));
     row.appendChild(selectCell(fatorSucata, v.FATOR_SUCATA || "0"));
 
-    // A indentação será baseada no valor do input NÍVEL
     aplicarIndentacao(row);
 
     // Esconde SEQ se estiver desativado
     if (!seqAtivo) {
         seqTd.style.display = "none";
-        document.querySelector("th.seq-col").style.display = "none";
+    }
+    // Esconde NÍVEL se estiver desativado
+    if (!nivelColVisivel) {
+        nivelCell.style.display = "none";
     }
 
     return row;
@@ -144,7 +139,8 @@ function criarLinhaVazia() {
 function atualizarSequencias() {
     const linhas = tabela.querySelectorAll("tr");
     linhas.forEach((row, index) => {
-        const seqTd = row.querySelector("td.seq-col");
+        // A coluna SEQ é agora a segunda TD na linha (índice 1)
+        const seqTd = row.querySelectorAll("td")[1];
         if (seqTd) {
             seqTd.textContent = (index + 1) * 10;
         }
@@ -155,7 +151,8 @@ function aplicarIndentacao(row) {
     for (let i = 1; i <= 10; i++) {
         row.classList.remove(`nivel-${i}`);
     }
-    const nivelInput = row.querySelector(".nivel-col input");
+    // A coluna NÍVEL é agora a terceira TD na linha (índice 2)
+    const nivelInput = row.querySelectorAll("td")[2]?.querySelector("input");
     if (nivelInput) {
         let nivel = parseInt(nivelInput.value);
         if (!isNaN(nivel) && nivel >= 1 && nivel <= 10) {
@@ -174,8 +171,11 @@ function criar10Linhas() {
 function getLinhaData(tr) {
     const cells = tr.querySelectorAll("td");
     return {
-        // Ajuste dos índices das células
-        NIVEL: cells[1]?.querySelector("input")?.value.trim() || "",
+        // Ajuste dos índices das células devido à nova ordem:
+        // cells[0] é a checkbox
+        // cells[1] é SEQ
+        // cells[2] é NÍVEL
+        NIVEL: cells[2]?.querySelector("input")?.value.trim() || "",
         SITE: cells[3]?.querySelector("select")?.value || "",
         ALTERNATIVA: cells[4]?.querySelector("select")?.value || "",
         CODIGO_MATERIAL: cells[5]?.querySelector("input")?.value.trim().toUpperCase() || "",
@@ -190,8 +190,11 @@ function getLinhaData(tr) {
 
 function preencherLinha(row, data) {
     const cells = row.querySelectorAll("td");
-    // Ajuste dos índices das células
-    cells[1].querySelector("input").value = data.NIVEL || "";
+    // Ajuste dos índices das células:
+    // cells[0] é a checkbox
+    // cells[1] é SEQ
+    // cells[2] é NÍVEL
+    cells[2].querySelector("input").value = data.NIVEL || "";
     aplicarIndentacao(row); // Reaplicar indentação ao preencher
     cells[3].querySelector("select").value = data.SITE || "1";
     cells[4].querySelector("select").value = data.ALTERNATIVA || "*";
@@ -207,12 +210,20 @@ function preencherLinha(row, data) {
 function verificarDuplicatas() {
     const linhas = Array.from(tabela.rows);
     const hashes = new Map();
-    const demarcationColors = ["rgb(255, 255, 224)", "rgb(224, 255, 255)", "rgb(208, 240, 192)", "rgb(173, 216, 230)", "rgb(255, 204, 204)"];
+    // Cores de demarcação padrão, para não serem confundidas com a demarcação de duplicatas
+    const defaultDemarcationColors = nivelColors.concat([
+        "#ffc107", // Amarelo Atenção
+        "#4CAF50", // Verde OK
+        "#f44336"  // Vermelho Crítico
+    ]).map(c => rgbToHex(c)); // Converte para hex para comparação consistente
 
+    // Reseta a cor de duplicata exata, se houver
     linhas.forEach(row => {
         const currentColor = row.style.backgroundColor;
-        if (currentColor === "rgb(240, 230, 255)") { // Roxo claro
-            row.style.backgroundColor = ""; // Reseta a cor de duplicata exata
+        // Converte a cor atual da linha para HEX para comparação.
+        // Se a cor atual for "#f0e6ff" (roxo claro), a gente remove.
+        if (rgbToHex(currentColor) === "#F0E6FF") {
+            row.style.backgroundColor = "";
         }
     });
 
@@ -225,7 +236,6 @@ function verificarDuplicatas() {
 
         if (data.CODIGO_MATERIAL === "" && data.ITEM_COMPONENTE === "") return;
 
-        // Inclui NÍVEL no hash para detecção de duplicatas
         const hash = `${data.SITE}|${data.ALTERNATIVA}|${data.CODIGO_MATERIAL}|${data.NIVEL}|${data.TIPO_ESTRUTURA}|${data.LINHA}|${data.ITEM_COMPONENTE}|${data.QTDE_MONTAGEM}|${data.UNIDADE_MEDIDA}|${data.FATOR_SUCATA}`;
 
         if (!hashes.has(hash)) hashes.set(hash, []);
@@ -236,12 +246,28 @@ function verificarDuplicatas() {
         if (rows.length > 1) {
             rows.forEach(row => {
                 const currentColor = row.style.backgroundColor;
-                if (!demarcationColors.includes(currentColor)) {
-                     row.style.backgroundColor = "#f0e6ff"; // Roxo claro para duplicatas exatas
+                // Aplica a cor de duplicata SOMENTE se a linha não estiver com uma cor de demarcação manual
+                if (!defaultDemarcationColors.includes(rgbToHex(currentColor))) {
+                    row.style.backgroundColor = "#f0e6ff"; // Roxo claro para duplicatas exatas
                 }
             });
         }
     }
+}
+
+// Helper para converter RGB para HEX (para consistência na comparação de cores)
+function rgbToHex(rgb) {
+    if (!rgb || rgb.indexOf('rgb') === -1) {
+        return rgb ? rgb.toUpperCase() : ""; // Retorna a string original se não for RGB (pode ser HEX direto ou vazio)
+    }
+    const parts = rgb.match(/^rgb\((\d+),\s*(\d+),\s*(\d+)\)$/);
+    if (!parts) return "";
+    delete parts[0];
+    for (let i = 1; i <= 3; i++) {
+        parts[i] = parseInt(parts[i]).toString(16);
+        if (parts[i].length === 1) parts[i] = "0" + parts[i];
+    }
+    return "#" + parts.join("").toUpperCase();
 }
 
 
@@ -362,9 +388,11 @@ document.getElementById("salvarListaBtn").addEventListener("click", () => {
     }
     const ws = XLSX.utils.json_to_sheet(dados);
 
-    // Definir largura da coluna NÍVEL (coluna B no Excel, índice 1)
+    // Definir largura da coluna NÍVEL (coluna C no Excel, índice 2)
     ws['!cols'] = ws['!cols'] || [];
-    ws['!cols'][1] = { wch: 5 }; // Define a largura para a coluna do NÍVEL (coluna B)
+    ws['!cols'][2] = { wch: 5 }; // Define a largura para a coluna do NÍVEL (coluna C)
+    ws['!cols'][1] = { wch: 5 }; // Define a largura para a coluna SEQ (coluna B)
+
 
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "ListaIFS");
@@ -420,27 +448,53 @@ document.getElementById("inputFile").addEventListener("change", async (e) => {
     }
 });
 
-// Lógica para pintar
-document.querySelectorAll(".paint-btn").forEach(button => {
+// Lógica para os botões de cor de Nível
+const nivelColorButtonsContainer = document.getElementById("nivelColorButtons");
+nivelColors.forEach((color, index) => {
+    const button = document.createElement("button");
+    button.className = `paint-btn btn-nivel-${index + 1}`;
+    button.dataset.color = color;
+    button.textContent = index + 1; // Número do nível
     button.addEventListener("click", function() {
         corSelecionada = this.dataset.color;
+        document.getElementById("removerDemarcacaoCheckbox").checked = false; // Desativa remoção
+        removerDemarcacao = false;
         Swal.fire({
-            title: "Cor selecionada!",
-            text: `Clique na ${demarcarLinha ? 'linha' : 'célula'} que deseja pintar com ${corSelecionada}. Clique novamente para remover a cor.`,
+            title: `Cor de Nível ${index + 1} selecionada!`,
+            text: `Clique na ${demarcarLinha ? 'linha' : 'célula'} que deseja pintar.`,
             icon: "info",
-            timer: 3000,
+            timer: 2000,
+            showConfirmButton: false
+        });
+    });
+    nivelColorButtonsContainer.appendChild(button);
+});
+
+// Lógica para os botões de cor de Atenção
+document.querySelectorAll("#attentionColorButtons .paint-btn").forEach(button => {
+    button.addEventListener("click", function() {
+        corSelecionada = this.dataset.color;
+        document.getElementById("removerDemarcacaoCheckbox").checked = false; // Desativa remoção
+        removerDemarcacao = false;
+        const label = this.nextElementSibling ? this.nextElementSibling.textContent : "uma cor";
+        Swal.fire({
+            title: `Cor "${label}" selecionada!`,
+            text: `Clique na ${demarcarLinha ? 'linha' : 'célula'} que deseja pintar.`,
+            icon: "info",
+            timer: 2000,
             showConfirmButton: false
         });
     });
 });
 
+
 // Event listener para a checkbox "Demarcar linha"
 document.getElementById("demarcarLinhaCheckbox").addEventListener("change", function() {
     demarcarLinha = this.checked;
     if (demarcarLinha) {
-        Swal.fire("Demarcar linha ativado!", "Clique em um botão de cor e depois na linha para demarcar/desdemarcar.", "info");
+        Swal.fire("Modo 'Demarcar linha' ativado!", "Agora, cliques aplicarão a cor selecionada à linha inteira.", "info");
     } else {
-        Swal.fire("Demarcar célula ativado!", "Clique em um botão de cor e depois na célula para demarcar/desdemarcar.", "info");
+        Swal.fire("Modo 'Demarcar linha' desativado!", "Cliques demarcarão células individuais.", "info");
     }
 });
 
@@ -448,16 +502,18 @@ document.getElementById("demarcarLinhaCheckbox").addEventListener("change", func
 document.getElementById("removerDemarcacaoCheckbox").addEventListener("change", function() {
     removerDemarcacao = this.checked;
     if (removerDemarcacao) {
-        Swal.fire("Modo de remoção de demarcação ativado!", "Agora, cliques apagarão as demarcações existentes.", "warning");
-        corSelecionada = ""; // Limpa a cor selecionada para evitar aplicação acidental
+        corSelecionada = ""; // Limpa a cor selecionada para garantir que só remova
+        Swal.fire("Modo 'Remover demarcação' ativado!", "Agora, cliques removerão as demarcações existentes. Selecione um botão de cor para sair deste modo.", "warning");
     } else {
-        Swal.fire("Modo de remoção de demarcação desativado!", "Pode voltar a demarcar.", "info");
+        Swal.fire("Modo 'Remover demarcação' desativado!", "Pode voltar a demarcar.", "info");
     }
 });
 
 document.getElementById("clearPaintBtn").addEventListener("click", () => {
     corSelecionada = "";
     document.getElementById("removerDemarcacaoCheckbox").checked = false; // Desmarca remover demarcação
+    demarcarLinha = false; // Garante que volta para demarcação de célula
+    document.getElementById("demarcarLinhaCheckbox").checked = false;
     removerDemarcacao = false;
     Swal.fire("Seleção de cor limpa!", "Agora o clique não aplicará cores.", "info", 1500);
 });
@@ -472,7 +528,6 @@ document.getElementById("ignorarDuplicatasCheckbox").addEventListener("change", 
         Swal.fire("Destaque de duplicatas ativado!", "Linhas duplicadas serão destacadas com roxo claro.", "info", 2000);
     }
 });
-
 
 // Lógica para Marcar/Desmarcar Todos com SweetAlert para apagar demarcações
 document.getElementById("toggleAllCheckboxes").addEventListener("change", function() {
@@ -546,6 +601,25 @@ document.getElementById("toggleSeqBtn").addEventListener("click", () => {
     }
 });
 
+// Lógica para exibir/ocultar a coluna NÍVEL
+document.getElementById("toggleNivelColBtn").addEventListener("click", () => {
+    const nivelHeader = document.querySelector("th.nivel-col");
+    const nivelCells = document.querySelectorAll("td.nivel-col");
+
+    nivelColVisivel = !nivelColVisivel;
+
+    nivelHeader.style.display = nivelColVisivel ? "" : "none";
+    nivelCells.forEach(cell => {
+        cell.style.display = nivelColVisivel ? "" : "none";
+    });
+
+    if (nivelColVisivel) {
+        Swal.fire("NÍVEL Visível!", "A coluna NÍVEL está visível.", "info", 1500);
+    } else {
+        Swal.fire("NÍVEL Oculta!", "A coluna NÍVEL está oculta.", "info", 1500);
+    }
+});
+
 
 async function handlePasteMultipleLines(event) {
     if (corSelecionada || demarcarLinha || removerDemarcacao) {
@@ -560,14 +634,18 @@ async function handlePasteMultipleLines(event) {
     const rowIndex = Array.from(tabela.rows).indexOf(tr);
 
     let columnIndex = -1;
-    // Ajustar os índices das colunas
-    if (td === tr.querySelectorAll("td")[1]?.querySelector("input")) { // NÍVEL (index 1)
-        columnIndex = 1;
-    } else if (td === tr.querySelectorAll("td")[5]?.querySelector("input")) { // CÓDIGO_MATERIAL (index 5)
+    // Ajustar os índices das células para o NÍVEL, CÓDIGO_MATERIAL, ITEM_COMPONENTE e QTDE_MONTAGEM
+    // Lembre-se que o índice 0 é a checkbox de seleção de linha
+    // O índice 1 é SEQ
+    // O índice 2 é NÍVEL
+    const allCellsInRow = tr.querySelectorAll("td");
+    if (targetCell === allCellsInRow[2]?.querySelector("input")) { // NÍVEL (index 2)
+        columnIndex = 2;
+    } else if (targetCell === allCellsInRow[5]?.querySelector("input")) { // CÓDIGO_MATERIAL (index 5)
         columnIndex = 5;
-    } else if (td === tr.querySelectorAll("td")[8]?.querySelector("input")) { // ITEM_COMPONENTE (index 8)
+    } else if (targetCell === allCellsInRow[8]?.querySelector("input")) { // ITEM_COMPONENTE (index 8)
         columnIndex = 8;
-    } else if (td === tr.querySelectorAll("td")[9]?.querySelector("input")) { // QTDE_MONTAGEM (index 9)
+    } else if (targetCell === allCellsInRow[9]?.querySelector("input")) { // QTDE_MONTAGEM (index 9)
         columnIndex = 9;
     } else {
         return; // Não é uma coluna para colar múltiplos itens
@@ -605,7 +683,7 @@ async function handlePasteMultipleLines(event) {
         const inputToUpdate = targetRow.querySelectorAll("td")[columnIndex]?.querySelector("input");
         if (inputToUpdate) {
             inputToUpdate.value = lines[i].toUpperCase();
-            if (columnIndex === 1) { // Se a coluna for NÍVEL, aplica a indentação imediatamente
+            if (columnIndex === 2) { // Se a coluna for NÍVEL, aplica a indentação imediatamente
                 aplicarIndentacao(targetRow);
             }
         }
@@ -624,5 +702,20 @@ document.addEventListener("DOMContentLoaded", () => {
         atualizarSequencias();
         verificarDuplicatas();
         Swal.fire("🎉 Bem-vindo!", "A lista foi inicializada com 10 linhas para você começar.", "info");
+    }
+
+    // Inicializa o estado de visibilidade das colunas ao carregar
+    const seqHeader = document.querySelector("th.seq-col");
+    const seqCells = document.querySelectorAll("td.seq-col");
+    if (!seqAtivo) {
+        seqHeader.style.display = "none";
+        seqCells.forEach(cell => cell.style.display = "none");
+    }
+
+    const nivelHeader = document.querySelector("th.nivel-col");
+    const nivelCells = document.querySelectorAll("td.nivel-col");
+    if (!nivelColVisivel) {
+        nivelHeader.style.display = "none";
+        nivelCells.forEach(cell => cell.style.display = "none");
     }
 });

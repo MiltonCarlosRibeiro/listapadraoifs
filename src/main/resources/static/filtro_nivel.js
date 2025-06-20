@@ -3,11 +3,11 @@ function aplicarFiltroNiveis() {
     const linhas = document.querySelectorAll("#listaTabela tbody tr");
 
     linhas.forEach(tr => {
-        // Agora o NÍVEL é um input de texto, então selecionamos o input dentro da célula
-        const nivelInput = tr.querySelector(".nivel-col input");
-        const nivel = nivelInput ? nivelInput.value : "";
+        // A coluna NÍVEL é agora a TD de índice 2 na linha
+        const nivelInput = tr.querySelectorAll("td")[2]?.querySelector("input");
+        const nivel = nivelInput ? nivelInput.value : null;
 
-        if (selecionados.length === 0 || selecionados.includes(nivel)) {
+        if (selecionados.length === 0 || (nivel && selecionados.includes(nivel))) {
             tr.style.display = ""; // Exibe a linha
         } else {
             tr.style.display = "none"; // Oculta a linha
@@ -30,18 +30,19 @@ function ativarFiltroAuto() {
     const observer = new MutationObserver(aplicarFiltroNiveis);
     const target = document.querySelector("#listaTabela tbody");
     if (target) {
-        observer.observe(target, { childList: true, subtree: true });
+        // Observa mudanças de filhos (linhas adicionadas/removidas) e mudanças em subárvores (inputs nas células)
+        observer.observe(target, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] });
     }
     configurarFiltroNiveis();
-    aplicarFiltroNiveis(); // Aplica o filtro inicial ao carregar
 }
 
 document.addEventListener("DOMContentLoaded", () => {
     ativarFiltroAuto();
-    // Adiciona listener para input/change em todas as células de Nível existentes
-    // Isso é importante para que o filtro seja re-aplicado quando o NÍVEL for alterado
-    // em uma célula (seja por digitação ou colagem)
-    document.querySelectorAll(".nivel-col input").forEach(input => {
-        input.addEventListener('input', aplicarFiltroNiveis);
+    // Re-aplicar filtro quando o script.js adiciona linhas iniciais
+    // Ou quando NÍVEL é modificado (evento 'change' buble)
+    document.getElementById("listaTabela").addEventListener('change', (event) => {
+        if (event.target.closest('.nivel-col')) {
+            aplicarFiltroNiveis();
+        }
     });
 });
