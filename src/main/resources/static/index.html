@@ -60,25 +60,33 @@
 
     <div class="color-labels">
         <div class="color-button">
-            <input type="text" value="🔵 Destacar Azul Claro" class="color-label" data-color="#d0ebff" readonly>
+            <input type="text" value="🔵 Demarcação Azul Claro" class="color-label" data-color="#d0ebff">
             <button class="paint-btn" data-color="#d0ebff">🎨</button>
         </div>
         <div class="color-button">
-            <input type="text" value="🟢 Destacar Verde Claro" class="color-label" data-color="#d0f0c0" readonly>
+            <input type="text" value="🟢 Demarcação Verde Claro" class="color-label" data-color="#d0f0c0">
             <button class="paint-btn" data-color="#d0f0c0">🎨</button>
         </div>
         <div class="color-button">
-            <input type="text" value="🔷 Azul Médio" class="color-label" data-color="#add8e6" readonly>
+            <input type="text" value="🔷 Demarcação Azul Médio" class="color-label" data-color="#add8e6">
             <button class="paint-btn" data-color="#add8e6">🎨</button>
         </div>
-        <label><input type="checkbox" id="paintFullRow"> Pintar linha inteira</label>
+        <div class="color-button">
+            <input type="text" value="🔴 Demarcação Vermelha" class="color-label" data-color="#ffcccc">
+            <button class="paint-btn" data-color="#ffcccc">🎨</button>
+        </div>
+        <label><input type="checkbox" id="demarcarLinhaCheckbox"> Demarcar linha</label>
+        <label><input type="checkbox" id="removerDemarcacaoCheckbox"> Remover demarcação</label>
+        <button id="clearPaintBtn">🎨 Limpar Seleção de Cor</button>
     </div>
 
     <div class="table-container">
         <table id="listaTabela">
             <thead>
             <tr>
-                <th><input type="checkbox" id="toggleAllCheckboxes"></th> <th class="indent-col">⇅</th> <th class="seq-col">SEQ</th>
+                <th><input type="checkbox" id="toggleAllCheckboxes"></th>
+                <th class="indent-col">⇅</th>
+                <th class="seq-col">SEQ</th>
                 <th>NÍVEL</th>
                 <th>SITE</th>
                 <th>ALTERNATIVA</th>
@@ -98,5 +106,5 @@
 </div>
 
 <script src="script.js"></script>
-<script src="filtro_nivel.js"></script> </body>
+<script src="filtro.js"></script> </body>
 </html>
