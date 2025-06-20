@@ -1,10 +1,10 @@
 let tabela = document.getElementById("listaTabela").getElementsByTagName("tbody")[0];
 let cacheCopiado = [];
-let seqAtivo = true;
+let seqAtivo = true; // SEQ estará visível por padrão
 let corSelecionada = "";
 let demarcarLinha = false;
 let removerDemarcacao = false;
-
+let ignorarDuplicatas = false;
 
 const unidades = ["un", "cj", "kg", "mm", "m"];
 const tiposEstrutura = ["Manufatura", "Comprado", ""];
@@ -14,30 +14,34 @@ const alternativas = ["*", ""];
 const siteValores = ["1", ""];
 const niveis = Array.from({ length: 10 }, (_, i) => (i + 1).toString());
 
-function inputCell(type, readOnly = false, value = "", isPasteTarget = false) {
+function inputCell(type, readOnly = false, value = "", isPasteTarget = false, className = "") {
     const td = document.createElement("td");
     const input = document.createElement("input");
     input.type = type;
     input.readOnly = readOnly;
     input.value = (value || "").toUpperCase();
+    if (className) td.classList.add(className); // Adiciona a classe à TD para CSS de nível
+
     input.addEventListener("input", (e) => {
         e.target.value = e.target.value.toUpperCase();
         verificarDuplicatas();
+        if (td.classList.contains('nivel-col')) { // Se for a coluna de nível, aplica indentação
+            aplicarIndentacao(e.target.closest('tr'));
+            // Dispara um evento personalizado para notificar o filtro sobre a mudança
+            e.target.dispatchEvent(new Event('change', { bubbles: true }));
+        }
     });
 
-    // Evento de clique para pintura de célula (com nova lógica)
     input.addEventListener("click", (e) => {
-        if (!demarcarLinha) { // Se não for para demarcar a linha inteira (ou seja, demarcar célula)
+        if (!demarcarLinha) {
             if (removerDemarcacao) {
-                e.target.style.backgroundColor = ""; // Sempre remove
+                e.target.style.backgroundColor = "";
             } else if (corSelecionada) {
-                // Toggle de pintura na célula
                 if (e.target.style.backgroundColor === corSelecionada) {
-                    e.target.style.backgroundColor = ""; // Remove a cor
+                    e.target.style.backgroundColor = "";
                 } else {
-                    e.target.style.backgroundColor = corSelecionada; // Aplica a cor
+                    e.target.style.backgroundColor = corSelecionada;
                 }
-                // corSelecionada NÃO É MAIS LIMPA AQUI para permitir demarcar várias
             }
         }
     });
@@ -62,19 +66,16 @@ function selectCell(options = [], selected = "", className = "") {
         select.appendChild(option);
     });
     select.addEventListener("change", verificarDuplicatas);
-    // Evento de clique para pintura de célula (com nova lógica)
     select.addEventListener("click", (e) => {
-        if (!demarcarLinha) { // Se não for para demarcar a linha inteira (ou seja, demarcar célula)
+        if (!demarcarLinha) {
             if (removerDemarcacao) {
-                e.target.style.backgroundColor = ""; // Sempre remove
+                e.target.style.backgroundColor = "";
             } else if (corSelecionada) {
-                // Toggle de pintura na célula
                 if (e.target.style.backgroundColor === corSelecionada) {
-                    e.target.style.backgroundColor = ""; // Remove a cor
+                    e.target.style.backgroundColor = "";
                 } else {
-                    e.target.style.backgroundColor = corSelecionada; // Aplica a cor
+                    e.target.style.backgroundColor = corSelecionada;
                 }
-                // corSelecionada NÃO É MAIS LIMPA AQUI para permitir demarcar várias
             }
         }
     });
@@ -92,48 +93,24 @@ function criarLinha(v = {}) {
     checkboxTd.appendChild(checkbox);
     row.appendChild(checkboxTd);
 
-    const indentTd = document.createElement("td");
-    const btnMais = document.createElement("button");
-    const btnMenos = document.createElement("button");
-    btnMais.textContent = "➕";
-    btnMenos.textContent = "➖";
-    btnMais.addEventListener("click", () => ajustarNivel(row, 1));
-    btnMenos.addEventListener("click", () => ajustarNivel(row, -1));
-    indentTd.appendChild(btnMenos);
-    indentTd.appendChild(btnMais);
-    row.appendChild(indentTd);
+    // Nível agora é um input de texto e a primeira coluna de dados
+    const nivelCell = inputCell("text", false, v.NIVEL || "", true, "nivel-col"); // Inicia vazio
+    row.appendChild(nivelCell);
 
     const seqTd = document.createElement("td");
     seqTd.classList.add("seq-col");
     row.appendChild(seqTd);
 
-    const nivelTd = document.createElement("td");
-    const nivelSelect = document.createElement("select");
-    nivelSelect.classList.add("nivel-select");
-    niveis.forEach(n => {
-        const opt = document.createElement("option");
-        opt.value = n;
-        opt.textContent = n;
-        nivelSelect.appendChild(opt);
-    });
-    nivelSelect.value = v.NIVEL || "1";
-    nivelSelect.addEventListener("change", () => aplicarIndentacao(row));
-    nivelTd.appendChild(nivelSelect);
-    row.appendChild(nivelTd);
-
-    // Adiciona evento de clique para a linha inteira para pintar (com nova lógica)
     row.addEventListener("click", (e) => {
-        if (demarcarLinha && !e.target.tagName.match(/INPUT|SELECT|BUTTON/)) { // Apenas se "Demarcar linha" estiver ativada
+        if (demarcarLinha && !e.target.tagName.match(/INPUT|SELECT|BUTTON/)) {
             if (removerDemarcacao) {
-                row.style.backgroundColor = ""; // Sempre remove
+                row.style.backgroundColor = "";
             } else if (corSelecionada) {
-                // Toggle de pintura na linha
                 if (row.style.backgroundColor === corSelecionada) {
-                    row.style.backgroundColor = ""; // Remove a cor
+                    row.style.backgroundColor = "";
                 } else {
-                    row.style.backgroundColor = corSelecionada; // Aplica a cor
+                    row.style.backgroundColor = corSelecionada;
                 }
-                // corSelecionada NÃO É MAIS LIMPA AQUI para permitir demarcar várias
             }
         }
     });
@@ -144,15 +121,17 @@ function criarLinha(v = {}) {
     row.appendChild(selectCell(tiposEstrutura, v.TIPO_ESTRUTURA || "Manufatura"));
     row.appendChild(selectCell(linhaValores, v.LINHA || "10"));
     row.appendChild(inputCell("text", false, v.ITEM_COMPONENTE || "", true));
-    // QTDE_MONTAGEM agora é tipo "text" e paste target
-    row.appendChild(inputCell("text", false, v.QTDE_MONTAGEM || "0", true)); // Alterado para type="text" e isPasteTarget = true
+    row.appendChild(inputCell("text", false, v.QTDE_MONTAGEM || "0", true));
     row.appendChild(selectCell(unidades, v.UNIDADE_MEDIDA || "un"));
     row.appendChild(selectCell(fatorSucata, v.FATOR_SUCATA || "0"));
 
+    // A indentação será baseada no valor do input NÍVEL
     aplicarIndentacao(row);
 
+    // Esconde SEQ se estiver desativado
     if (!seqAtivo) {
-        row.querySelector(".seq-col").style.display = "none";
+        seqTd.style.display = "none";
+        document.querySelector("th.seq-col").style.display = "none";
     }
 
     return row;
@@ -172,22 +151,16 @@ function atualizarSequencias() {
     });
 }
 
-function ajustarNivel(row, delta) {
-    const select = row.querySelector(".nivel-select");
-    if (!select) return;
-    let nivelAtual = parseInt(select.value);
-    nivelAtual = Math.min(10, Math.max(1, nivelAtual + delta));
-    select.value = nivelAtual;
-    aplicarIndentacao(row);
-}
-
 function aplicarIndentacao(row) {
     for (let i = 1; i <= 10; i++) {
         row.classList.remove(`nivel-${i}`);
     }
-    const nivel = row.querySelector(".nivel-select")?.value;
-    if (nivel) {
-        row.classList.add(`nivel-${nivel}`);
+    const nivelInput = row.querySelector(".nivel-col input");
+    if (nivelInput) {
+        let nivel = parseInt(nivelInput.value);
+        if (!isNaN(nivel) && nivel >= 1 && nivel <= 10) {
+            row.classList.add(`nivel-${nivel}`);
+        }
     }
 }
 
@@ -201,82 +174,70 @@ function criar10Linhas() {
 function getLinhaData(tr) {
     const cells = tr.querySelectorAll("td");
     return {
-        SITE: cells[4]?.querySelector("select")?.value || "",
-        ALTERNATIVA: cells[5]?.querySelector("select")?.value || "",
-        CODIGO_MATERIAL: cells[6]?.querySelector("input")?.value.trim().toUpperCase() || "",
-        NIVEL: cells[3]?.querySelector("select")?.value || "1",
-        TIPO_ESTRUTURA: cells[7]?.querySelector("select")?.value || "",
-        LINHA: cells[8]?.querySelector("select")?.value || "",
-        ITEM_COMPONENTE: cells[9]?.querySelector("input")?.value.trim().toUpperCase() || "",
-        QTDE_MONTAGEM: cells[10]?.querySelector("input")?.value.trim() || "",
-        UNIDADE_MEDIDA: cells[11]?.querySelector("select")?.value || "",
-        FATOR_SUCATA: cells[12]?.querySelector("select")?.value || ""
+        // Ajuste dos índices das células
+        NIVEL: cells[1]?.querySelector("input")?.value.trim() || "",
+        SITE: cells[3]?.querySelector("select")?.value || "",
+        ALTERNATIVA: cells[4]?.querySelector("select")?.value || "",
+        CODIGO_MATERIAL: cells[5]?.querySelector("input")?.value.trim().toUpperCase() || "",
+        TIPO_ESTRUTURA: cells[6]?.querySelector("select")?.value || "",
+        LINHA: cells[7]?.querySelector("select")?.value || "",
+        ITEM_COMPONENTE: cells[8]?.querySelector("input")?.value.trim().toUpperCase() || "",
+        QTDE_MONTAGEM: cells[9]?.querySelector("input")?.value.trim() || "",
+        UNIDADE_MEDIDA: cells[10]?.querySelector("select")?.value || "",
+        FATOR_SUCATA: cells[11]?.querySelector("select")?.value || ""
     };
 }
 
 function preencherLinha(row, data) {
     const cells = row.querySelectorAll("td");
-    cells[3].querySelector("select").value = data.NIVEL || "1";
-    aplicarIndentacao(row);
-    cells[4].querySelector("select").value = data.SITE || "1";
-    cells[5].querySelector("select").value = data.ALTERNATIVA || "*";
-    cells[6].querySelector("input").value = (data.CODIGO_MATERIAL || "").toUpperCase();
-    cells[7].querySelector("select").value = data.TIPO_ESTRUTURA || "Manufatura";
-    cells[8].querySelector("select").value = data.LINHA || "10";
-    cells[9].querySelector("input").value = (data.ITEM_COMPONENTE || "").toUpperCase();
-    cells[10].querySelector("input").value = data.QTDE_MONTAGEM || "0";
-    cells[11].querySelector("select").value = data.UNIDADE_MEDIDA || "un";
-    cells[12].querySelector("select").value = data.FATOR_SUCATA || "0";
+    // Ajuste dos índices das células
+    cells[1].querySelector("input").value = data.NIVEL || "";
+    aplicarIndentacao(row); // Reaplicar indentação ao preencher
+    cells[3].querySelector("select").value = data.SITE || "1";
+    cells[4].querySelector("select").value = data.ALTERNATIVA || "*";
+    cells[5].querySelector("input").value = (data.CODIGO_MATERIAL || "").toUpperCase();
+    cells[6].querySelector("select").value = data.TIPO_ESTRUTURA || "Manufatura";
+    cells[7].querySelector("select").value = data.LINHA || "10";
+    cells[8].querySelector("input").value = (data.ITEM_COMPONENTE || "").toUpperCase();
+    cells[9].querySelector("input").value = (data.QTDE_MONTAGEM || "0").replace(",", "."); // Garante ponto decimal
+    cells[10].querySelector("select").value = data.UNIDADE_MEDIDA || "un";
+    cells[11].querySelector("select").value = data.FATOR_SUCATA || "0";
 }
 
 function verificarDuplicatas() {
     const linhas = Array.from(tabela.rows);
     const hashes = new Map();
-    const conjuntos = new Map();
+    const demarcationColors = ["rgb(255, 255, 224)", "rgb(224, 255, 255)", "rgb(208, 240, 192)", "rgb(173, 216, 230)", "rgb(255, 204, 204)"];
 
     linhas.forEach(row => {
-        // Apenas reseta cores de fundo de duplicata se não for uma cor de demarcação manual
         const currentColor = row.style.backgroundColor;
-        const demarcationColors = ["rgb(208, 235, 255)", "rgb(208, 240, 192)", "rgb(173, 216, 230)", "rgb(255, 204, 204)"];
-        if (currentColor === "rgb(240, 230, 255)" || currentColor === "rgb(217, 194, 255)") { // Cores de duplicata
-            row.style.backgroundColor = "";
+        if (currentColor === "rgb(240, 230, 255)") { // Roxo claro
+            row.style.backgroundColor = ""; // Reseta a cor de duplicata exata
         }
     });
+
+    if (ignorarDuplicatas) {
+        return;
+    }
 
     linhas.forEach((tr) => {
         const data = getLinhaData(tr);
 
         if (data.CODIGO_MATERIAL === "" && data.ITEM_COMPONENTE === "") return;
 
+        // Inclui NÍVEL no hash para detecção de duplicatas
         const hash = `${data.SITE}|${data.ALTERNATIVA}|${data.CODIGO_MATERIAL}|${data.NIVEL}|${data.TIPO_ESTRUTURA}|${data.LINHA}|${data.ITEM_COMPONENTE}|${data.QTDE_MONTAGEM}|${data.UNIDADE_MEDIDA}|${data.FATOR_SUCATA}`;
-        const groupHash = `${data.CODIGO_MATERIAL}|${data.ITEM_COMPONENTE}`;
 
         if (!hashes.has(hash)) hashes.set(hash, []);
         hashes.get(hash).push(tr);
-
-        if (!conjuntos.has(groupHash)) conjuntos.set(groupHash, []);
-        conjuntos.get(groupHash).push(tr);
     });
 
     for (const [hash, rows] of hashes) {
         if (rows.length > 1) {
             rows.forEach(row => {
                 const currentColor = row.style.backgroundColor;
-                const demarcationColors = ["rgb(208, 235, 255)", "rgb(208, 240, 192)", "rgb(173, 216, 230)", "rgb(255, 204, 204)"];
-                if (!demarcationColors.includes(currentColor)) { // Não sobrescreve cores de demarcação manual
-                     row.style.backgroundColor = "#f0e6ff"; // Roxo claro
-                }
-            });
-        }
-    }
-
-    for (const [groupHash, rows] of conjuntos) {
-        if (rows.length > 1) {
-            rows.forEach(row => {
-                const currentColor = row.style.backgroundColor;
-                const demarcationColors = ["rgb(208, 235, 255)", "rgb(208, 240, 192)", "rgb(173, 216, 230)", "rgb(255, 204, 204)"];
-                if (currentColor !== "rgb(240, 230, 255)" && !demarcationColors.includes(currentColor)) {
-                    row.style.backgroundColor = "#d9c2ff"; // Roxo médio
+                if (!demarcationColors.includes(currentColor)) {
+                     row.style.backgroundColor = "#f0e6ff"; // Roxo claro para duplicatas exatas
                 }
             });
         }
@@ -350,8 +311,6 @@ document.getElementById("inserirAbaixoBtn").addEventListener("click", () => {
 });
 
 document.getElementById("copiarSelecionadoBtn").addEventListener("click", () => {
-    const copiarLinhaCheckbox = document.getElementById("copiarLinhaCheckbox").checked;
-    const copiarConjuntoCheckbox = document.getElementById("copiarConjuntoCheckbox").checked;
     const selecionados = document.querySelectorAll(".linha-selecao:checked");
 
     if (selecionados.length === 0) {
@@ -360,31 +319,7 @@ document.getElementById("copiarSelecionadoBtn").addEventListener("click", () => 
     }
 
     cacheCopiado = [];
-
-    if (copiarLinhaCheckbox) {
-        cacheCopiado = Array.from(selecionados).map(cb => getLinhaData(cb.closest("tr")));
-    } else if (copiarConjuntoCheckbox) {
-        if (selecionados.length !== 1) {
-            Swal.fire("⚠️ Selecione uma única linha", "Para copiar o conjunto, selecione apenas uma linha.", "info");
-            return;
-        }
-        const linhaBaseData = getLinhaData(selecionados[0].closest("tr"));
-        if (!linhaBaseData.CODIGO_MATERIAL && !linhaBaseData.ITEM_COMPONENTE) {
-            Swal.fire("⚠️ Linha vazia", "Para copiar o conjunto, o Código Material ou Item Componente da linha selecionada não pode estar vazio.", "info");
-            return;
-        }
-
-        const todasAsLinhas = Array.from(tabela.rows);
-        cacheCopiado = todasAsLinhas.filter(tr => {
-            const data = getLinhaData(tr);
-            return (data.CODIGO_MATERIAL === linhaBaseData.CODIGO_MATERIAL && data.ITEM_COMPONENTE === linhaBaseData.ITEM_COMPONENTE);
-        }).map(tr => getLinhaData(tr));
-
-    } else {
-        Swal.fire("⚠️ Selecione uma opção de cópia", "Escolha 'Copiar Linha' ou 'Copiar Conjunto'.", "info");
-        return;
-    }
-
+    cacheCopiado = Array.from(selecionados).map(cb => getLinhaData(cb.closest("tr")));
     Swal.fire("📋 Copiado", `${cacheCopiado.length} linha(s) copiadas.`, "success");
 });
 
@@ -426,6 +361,11 @@ document.getElementById("salvarListaBtn").addEventListener("click", () => {
         return;
     }
     const ws = XLSX.utils.json_to_sheet(dados);
+
+    // Definir largura da coluna NÍVEL (coluna B no Excel, índice 1)
+    ws['!cols'] = ws['!cols'] || [];
+    ws['!cols'][1] = { wch: 5 }; // Define a largura para a coluna do NÍVEL (coluna B)
+
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "ListaIFS");
     XLSX.writeFile(wb, `lista_padrao_ifs_${new Date().toISOString().split("T")[0]}.xlsx`);
@@ -454,10 +394,10 @@ document.getElementById("inputFile").addEventListener("change", async (e) => {
 
         json.forEach(rowData => {
             const mappedData = {
+                NIVEL: String(rowData.NIVEL || rowData.Nivel || ""),
                 SITE: rowData.SITE || rowData.Site || "1",
                 ALTERNATIVA: rowData.ALTERNATIVA || rowData.Alternativa || "*",
                 CODIGO_MATERIAL: rowData["CÓDIGO_MATERIAL"] || rowData["CODIGO_MATERIAL"] || rowData["CODIGO MATERIAL"] || rowData.Codigo_Material || rowData.CodigoMaterial || "",
-                NIVEL: String(rowData.NIVEL || rowData.Nivel || "1"),
                 TIPO_ESTRUTURA: rowData["TIPO ESTRUTURA"] || rowData.Tipo_Estrutura || rowData.TipoEstrutura || "Manufatura",
                 LINHA: String(rowData.LINHA || rowData.Linha || "10"),
                 ITEM_COMPONENTE: rowData.ITEM_COMPONENTE || rowData.Item_Componente || rowData.ItemComponente || "",
@@ -477,27 +417,6 @@ document.getElementById("inputFile").addEventListener("change", async (e) => {
         Swal.fire("❌ Erro", "Não foi possível carregar a lista. Verifique o formato do arquivo ou o console para detalhes.", "error");
     } finally {
         e.target.value = '';
-    }
-});
-
-
-document.getElementById("toggleSeqBtn").addEventListener("click", () => {
-    const seqHeader = document.querySelector("#listaTabela th.seq-col");
-    const seqCells = document.querySelectorAll("#listaTabela td.seq-col");
-    const icon = document.querySelector("#toggleSeqBtn .bi");
-
-    if (seqAtivo) {
-        seqHeader.style.display = "none";
-        seqCells.forEach(cell => cell.style.display = "none");
-        icon.classList.remove("bi-eye");
-        icon.classList.add("bi-eye-slash");
-        seqAtivo = false;
-    } else {
-        seqHeader.style.display = "";
-        seqCells.forEach(cell => cell.style.display = "");
-        icon.classList.remove("bi-eye-slash");
-        icon.classList.add("bi-eye");
-        seqAtivo = true;
     }
 });
 
@@ -543,17 +462,93 @@ document.getElementById("clearPaintBtn").addEventListener("click", () => {
     Swal.fire("Seleção de cor limpa!", "Agora o clique não aplicará cores.", "info", 1500);
 });
 
+// Lógica para o checkbox "Ignorar destaque de duplicatas"
+document.getElementById("ignorarDuplicatasCheckbox").addEventListener("change", function() {
+    ignorarDuplicatas = this.checked;
+    verificarDuplicatas(); // Re-verifica duplicatas para aplicar/remover o destaque
+    if (ignorarDuplicatas) {
+        Swal.fire("Destaque de duplicatas desativado!", "As linhas duplicadas não serão mais destacadas com roxo claro.", "info", 2000);
+    } else {
+        Swal.fire("Destaque de duplicatas ativado!", "Linhas duplicadas serão destacadas com roxo claro.", "info", 2000);
+    }
+});
 
+
+// Lógica para Marcar/Desmarcar Todos com SweetAlert para apagar demarcações
 document.getElementById("toggleAllCheckboxes").addEventListener("change", function() {
     const checkboxes = document.querySelectorAll(".linha-selecao");
-    checkboxes.forEach(cb => {
-        cb.checked = this.checked;
+    const headerCheckbox = document.getElementById("toggleAllCheckboxesHeader");
+
+    // Sincroniza o checkbox do cabeçalho
+    headerCheckbox.checked = this.checked;
+
+    if (this.checked) {
+        checkboxes.forEach(cb => {
+            cb.checked = true;
+        });
+    } else {
+        Swal.fire({
+            title: "Apagar todas as demarcações?",
+            text: "Deseja remover todas as cores aplicadas à tabela?",
+            icon: "warning",
+            showCancelButton: true,
+            confirmButtonColor: "#3085d6",
+            cancelButtonColor: "#d33",
+            confirmButtonText: "Sim, apagar!",
+            cancelButtonText: "Não, cancelar"
+        }).then((result) => {
+            if (result.isConfirmed) {
+                // Remove todas as demarcações
+                const allCells = tabela.querySelectorAll("td");
+                const allRows = tabela.querySelectorAll("tr");
+                allCells.forEach(cell => cell.style.backgroundColor = "");
+                allRows.forEach(row => row.style.backgroundColor = "");
+
+                // Desmarca todas as checkboxes
+                checkboxes.forEach(cb => cb.checked = false);
+                headerCheckbox.checked = false; // Garante que o cabeçalho também seja desmarcado
+                Swal.fire("Demarcações removidas!", "", "success", 1500);
+            } else {
+                // Se o usuário cancelar, re-seleciona "Marcar/Desmarcar Todos"
+                this.checked = true;
+                headerCheckbox.checked = true;
+                checkboxes.forEach(cb => cb.checked = true); // Mantém todas as checkboxes marcadas
+            }
+        });
+    }
+});
+
+// Sincroniza o checkbox do cabeçalho com o checkbox de "Marcar/Desmarcar Todos"
+document.getElementById("toggleAllCheckboxesHeader").addEventListener("change", function() {
+    const mainToggleCheckbox = document.getElementById("toggleAllCheckboxes");
+    mainToggleCheckbox.checked = this.checked;
+
+    // Dispara o evento change para que a lógica principal seja executada
+    mainToggleCheckbox.dispatchEvent(new Event('change'));
+});
+
+// Lógica para exibir/ocultar a coluna SEQ
+document.getElementById("toggleSeqBtn").addEventListener("click", () => {
+    const seqHeader = document.querySelector("th.seq-col");
+    const seqCells = document.querySelectorAll("td.seq-col");
+
+    seqAtivo = !seqAtivo;
+
+    seqHeader.style.display = seqAtivo ? "" : "none";
+    seqCells.forEach(cell => {
+        cell.style.display = seqAtivo ? "" : "none";
     });
+
+    if (seqAtivo) {
+        Swal.fire("SEQ Visível!", "A coluna SEQ está visível.", "info", 1500);
+    } else {
+        Swal.fire("SEQ Oculta!", "A coluna SEQ está oculta.", "info", 1500);
+    }
 });
 
 
 async function handlePasteMultipleLines(event) {
-    if (corSelecionada || demarcarLinha || removerDemarcacao) { // Verifica todas as condições de pintura
+    if (corSelecionada || demarcarLinha || removerDemarcacao) {
         Swal.fire("Modo de Demarcação Ativo", "Desative o modo de demarcação ou limpe a cor selecionada para colar.", "warning");
         event.preventDefault();
         return;
@@ -565,15 +560,17 @@ async function handlePasteMultipleLines(event) {
     const rowIndex = Array.from(tabela.rows).indexOf(tr);
 
     let columnIndex = -1;
-    // Identifica qual coluna está sendo colada (CODIGO_MATERIAL ou ITEM_COMPONENTE ou QTDE_MONTAGEM)
-    if (td === tr.querySelectorAll("td")[6]) {
-        columnIndex = 6;
-    } else if (td === tr.querySelectorAll("td")[9]) {
+    // Ajustar os índices das colunas
+    if (td === tr.querySelectorAll("td")[1]?.querySelector("input")) { // NÍVEL (index 1)
+        columnIndex = 1;
+    } else if (td === tr.querySelectorAll("td")[5]?.querySelector("input")) { // CÓDIGO_MATERIAL (index 5)
+        columnIndex = 5;
+    } else if (td === tr.querySelectorAll("td")[8]?.querySelector("input")) { // ITEM_COMPONENTE (index 8)
+        columnIndex = 8;
+    } else if (td === tr.querySelectorAll("td")[9]?.querySelector("input")) { // QTDE_MONTAGEM (index 9)
         columnIndex = 9;
-    } else if (td === tr.querySelectorAll("td")[10]) { // Adicionado para QTDE_MONTAGEM
-        columnIndex = 10;
     } else {
-        return;
+        return; // Não é uma coluna para colar múltiplos itens
     }
 
     event.preventDefault();
@@ -608,6 +605,9 @@ async function handlePasteMultipleLines(event) {
         const inputToUpdate = targetRow.querySelectorAll("td")[columnIndex]?.querySelector("input");
         if (inputToUpdate) {
             inputToUpdate.value = lines[i].toUpperCase();
+            if (columnIndex === 1) { // Se a coluna for NÍVEL, aplica a indentação imediatamente
+                aplicarIndentacao(targetRow);
+            }
         }
     }
 
@@ -621,7 +621,7 @@ async function handlePasteMultipleLines(event) {
 document.addEventListener("DOMContentLoaded", () => {
     if (tabela.rows.length === 0) {
         criar10Linhas();
-        atualizarSequencias(); // Garante que a sequência esteja correta na inicialização
+        atualizarSequencias();
         verificarDuplicatas();
         Swal.fire("🎉 Bem-vindo!", "A lista foi inicializada com 10 linhas para você começar.", "info");
     }

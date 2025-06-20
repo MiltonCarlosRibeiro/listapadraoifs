@@ -26,13 +26,34 @@
         <button id="copiarSelecionadoBtn">📋 Copiar Selecionado</button>
         <button id="colarBtn">📥 Colar</button>
         <button id="deletarSelecionadosBtn">🗑️ Deletar Linha</button>
-        <button id="inserirAcimaBtn">🔼 Linha Acima</button>
-        <button id="inserirAbaixoBtn">🔽 Linha Abaixo</button>
-    </div>
+        <button id="inserirAcimaBtn">⬆️ Inserir Acima</button>
+        <button id="inserirAbaixoBtn">⬇️ Inserir Abaixo</button>
 
-    <div class="copy-options">
-        <label><input type="checkbox" id="copiarLinhaCheckbox"> Copiar Linha</label>
-        <label><input type="checkbox" id="copiarConjuntoCheckbox"> Copiar Conjunto</label>
+        <div class="color-button">
+            <input type="text" value="🟡 Destacar Amarelo" class="color-label" data-color="#ffffe0" readonly>
+            <button class="paint-btn" data-color="#ffffe0">🎨</button>
+        </div>
+        <div class="color-button">
+            <input type="text" value="🔵 Destacar Azul Claro" class="color-label" data-color="#e0ffff" readonly>
+            <button class="paint-btn" data-color="#e0ffff">🎨</button>
+        </div>
+        <div class="color-button">
+            <input type="text" value="🟢 Destacar Verde Claro" class="color-label" data-color="#d0f0c0" readonly>
+            <button class="paint-btn" data-color="#d0f0c0">🎨</button>
+        </div>
+        <div class="color-button">
+            <input type="text" value="🔷 Azul Médio" class="color-label" data-color="#add8e6" readonly>
+            <button class="paint-btn" data-color="#add8e6">🎨</button>
+        </div>
+        <div class="color-button">
+            <input type="text" value="🔴 Vermelho Claro" class="color-label" data-color="#ffcccc" readonly>
+            <button class="paint-btn" data-color="#ffcccc">🎨</button>
+        </div>
+        <button id="clearPaintBtn">🚫 Limpar Seleção de Cor</button>
+        <label><input type="checkbox" id="demarcarLinhaCheckbox"> Demarcar linha</label>
+        <label><input type="checkbox" id="removerDemarcacaoCheckbox"> Remover demarcação</label>
+        <label><input type="checkbox" id="ignorarDuplicatasCheckbox"> Ignorar destaque de duplicatas</label>
+        <label><input type="checkbox" id="toggleAllCheckboxes"> Marcar/Desmarcar Todos</label>
     </div>
 
     <div class="table-controls">
@@ -58,36 +79,13 @@
         </div>
     </div>
 
-    <div class="color-labels">
-        <div class="color-button">
-            <input type="text" value="🔵 Demarcação Azul Claro" class="color-label" data-color="#d0ebff">
-            <button class="paint-btn" data-color="#d0ebff">🎨</button>
-        </div>
-        <div class="color-button">
-            <input type="text" value="🟢 Demarcação Verde Claro" class="color-label" data-color="#d0f0c0">
-            <button class="paint-btn" data-color="#d0f0c0">🎨</button>
-        </div>
-        <div class="color-button">
-            <input type="text" value="🔷 Demarcação Azul Médio" class="color-label" data-color="#add8e6">
-            <button class="paint-btn" data-color="#add8e6">🎨</button>
-        </div>
-        <div class="color-button">
-            <input type="text" value="🔴 Demarcação Vermelha" class="color-label" data-color="#ffcccc">
-            <button class="paint-btn" data-color="#ffcccc">🎨</button>
-        </div>
-        <label><input type="checkbox" id="demarcarLinhaCheckbox"> Demarcar linha</label>
-        <label><input type="checkbox" id="removerDemarcacaoCheckbox"> Remover demarcação</label>
-        <button id="clearPaintBtn">🎨 Limpar Seleção de Cor</button>
-    </div>
-
     <div class="table-container">
         <table id="listaTabela">
             <thead>
             <tr>
-                <th><input type="checkbox" id="toggleAllCheckboxes"></th>
-                <th class="indent-col">⇅</th>
+                <th><input type="checkbox" id="toggleAllCheckboxesHeader"></th>
+                <th class="nivel-col">NÍVEL</th>
                 <th class="seq-col">SEQ</th>
-                <th>NÍVEL</th>
                 <th>SITE</th>
                 <th>ALTERNATIVA</th>
                 <th>CÓDIGO_MATERIAL</th>
@@ -106,5 +104,6 @@
 </div>
 
 <script src="script.js"></script>
-<script src="filtro.js"></script> </body>
+<script src="filtro_nivel.js"></script>
+</body>
 </html>

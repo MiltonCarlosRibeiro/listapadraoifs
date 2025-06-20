@@ -3,7 +3,10 @@ function aplicarFiltroNiveis() {
     const linhas = document.querySelectorAll("#listaTabela tbody tr");
 
     linhas.forEach(tr => {
-        const nivel = tr.querySelector(".nivel-select")?.value;
+        // Agora o NÍVEL é um input de texto, então selecionamos o input dentro da célula
+        const nivelInput = tr.querySelector(".nivel-col input");
+        const nivel = nivelInput ? nivelInput.value : "";
+
         if (selecionados.length === 0 || selecionados.includes(nivel)) {
             tr.style.display = ""; // Exibe a linha
         } else {
@@ -35,4 +38,10 @@ function ativarFiltroAuto() {
 
 document.addEventListener("DOMContentLoaded", () => {
     ativarFiltroAuto();
+    // Adiciona listener para input/change em todas as células de Nível existentes
+    // Isso é importante para que o filtro seja re-aplicado quando o NÍVEL for alterado
+    // em uma célula (seja por digitação ou colagem)
+    document.querySelectorAll(".nivel-col input").forEach(input => {
+        input.addEventListener('input', aplicarFiltroNiveis);
+    });
 });

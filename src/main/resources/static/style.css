@@ -50,15 +50,17 @@ h1 {
     background-color: #5e35b1;
 }
 
-.copy-options,
-.table-controls,
-.color-labels {
-    margin-bottom: 12px;
+/* Removendo .copy-options, .color-labels pois foram unificados/ajustados */
+.table-controls {
     display: flex;
     flex-wrap: wrap;
-    align-items: center;
     gap: 20px;
-    font-weight: bold;
+    margin-bottom: 20px;
+    background-color: #f0f0f0;
+    padding: 15px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    align-items: center;
 }
 
 .table-container {
@@ -105,51 +107,101 @@ td select {
     text-transform: none;
 }
 
-/* Identação por nível */
-.nivel-1 { padding-left: 0px !important; }
-.nivel-2 { padding-left: 20px !important; }
-.nivel-3 { padding-left: 40px !important; }
-.nivel-4 { padding-left: 60px !important; }
-.nivel-5 { padding-left: 80px !important; }
-.nivel-6 { padding-left: 100px !important; }
-.nivel-7 { padding-left: 120px !important; }
-.nivel-8 { padding-left: 140px !important; }
-.nivel-9 { padding-left: 160px !important; }
-.nivel-10 { padding-left: 180px !important; }
+/* Removendo a largura da coluna de indentação se ela não existe mais */
+th.indent-col,
+td.indent-col {
+    display: none; /* Garante que a coluna sumiu completamente */
+    width: 0 !important;
+    padding: 0 !important;
+}
+
+/* Ajustes para a coluna NÍVEL, que agora é a primeira de dados */
+th.nivel-col,
+td.nivel-col {
+    width: 60px; /* Ajuste a largura conforme necessário */
+    min-width: 60px;
+    max-width: 60px;
+}
+
+/* Estilo para indentação baseada no nível */
+tr.nivel-1 td.nivel-col input { padding-left: 5px; }
+tr.nivel-2 td.nivel-col input { padding-left: 15px; }
+tr.nivel-3 td.nivel-col input { padding-left: 25px; }
+tr.nivel-4 td.nivel-col input { padding-left: 35px; }
+tr.nivel-5 td.nivel-col input { padding-left: 45px; }
+tr.nivel-6 td.nivel-col input { padding-left: 55px; }
+tr.nivel-7 td.nivel-col input { padding-left: 65px; }
+tr.nivel-8 td.nivel-col input { padding-left: 75px; }
+tr.nivel-9 td.nivel-col input { padding-left: 85px; }
+tr.nivel-10 td.nivel-col input { padding-left: 95px; }
 
 /* Coluna SEQ oculta */
 .seq-col.hidden,
-td.seq.hidden {
+th.seq-col.hidden {
     display: none;
 }
 
-/* Coluna de indentação */
-.indent-col {
-    width: 35px;
+/* === Estilos para os controles de tabela (Filtro e SEQ Toggle) === */
+.nivel-filter label,
+.seq-toggle label {
+    font-weight: bold;
+    margin-right: 10px;
 }
 
-/* Botões de cor e label */
-.color-labels .color-button {
+.checkbox-niveis {
     display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.checkbox-niveis label {
+    display: inline-flex;
     align-items: center;
-    gap: 10px;
+    gap: 4px;
+    background-color: #e6e6e6;
+    padding: 5px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.checkbox-niveis label:hover {
+    background-color: #dcdcdc;
+}
+
+.checkbox-niveis input[type="checkbox"] {
+    cursor: pointer;
+    margin-right: 0;
+}
+
+.nivel-filter button,
+.seq-toggle button {
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    padding: 8px 12px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.nivel-filter button:hover,
+.seq-toggle button:hover {
+    background-color: #45a049;
+}
+
+
+/* Ajustes para alinhar os botões de cor na mesma linha */
+.button-bar .color-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    margin-right: 10px; /* Espaço entre os blocos de cor */
 }
 
 .color-labels .color-label {
-    border: 1px solid #ccc;
-    padding: 4px 6px;
-    font-size: 13px;
-    border-radius: 4px;
-    width: 200px;
-}
-
-.color-labels .paint-btn {
-    border: none;
-    padding: 6px 10px;
-    cursor: pointer;
-    background-color: #ccc;
-    border-radius: 4px;
-    font-weight: bold;
+    width: auto; /* Deixa o input se ajustar ao conteúdo */
+    min-width: 120px; /* Mas garante um tamanho mínimo */
 }
 
 /* Régua ao passar mouse */
@@ -157,7 +209,7 @@ tbody tr:hover {
     background-color: #fff8dc !important; /* amarelo pastel claro */
 }
 
-/* Estilo de cards reutilizados */
+/* Estilo de cards reutilizados - Mantido se ainda for usado em algum contexto */
 .cards-container {
     display: flex;
     gap: 20px;
