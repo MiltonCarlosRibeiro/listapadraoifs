@@ -7,7 +7,7 @@ body {
 }
 
 .container {
-    max-width: 1400px;
+    max-width: 1400px; /* Mantém o valor original */
     margin: auto;
 }
 
@@ -50,7 +50,7 @@ h1 {
     background-color: #5e35b1;
 }
 
-/* Novo: Controles de Pintura */
+/* Controles de Pintura */
 .painting-controls {
     margin-top: 15px;
     padding: 15px;
@@ -89,7 +89,7 @@ h1 {
 .attention-green { background-color: #28A745; color: white; } /* Verde Vívido */
 .attention-red { background-color: #DC3545; color: white; } /* Vermelho Brilhante */
 
-/* Novo: Controles de Filtro */
+/* Controles de Filtro */
 .filter-controls {
     margin-top: 20px;
     padding: 15px;
@@ -142,7 +142,8 @@ h1 {
 table {
     width: 100%;
     border-collapse: collapse;
-    white-space: nowrap; /* Impede a quebra de linha nas células */
+    white-space: nowrap;
+    table-layout: fixed; /* Garante que as larguras de coluna funcionem */
 }
 
 th, td {
@@ -150,6 +151,8 @@ th, td {
     border: 1px solid #ddd;
     text-align: left;
     vertical-align: middle;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 th {
@@ -165,6 +168,7 @@ tbody tr:nth-child(even) {
 }
 
 td input[type="text"],
+td input[type="number"],
 td select {
     width: 100%;
     padding: 6px;
@@ -175,6 +179,7 @@ td select {
 }
 
 td input[type="text"]:focus,
+td input[type="number"]:focus,
 td select:focus {
     outline: none;
     border-color: #673ab7;
@@ -191,17 +196,16 @@ input[type=number] {
     -moz-appearance: textfield;
 }
 
-/* Colunas de checkbox e botões +/- */
-td:first-child,
-th:first-child {
+/* Coluna de checkbox (1ª coluna) */
+th:nth-child(1), td:nth-child(1) {
+    width: 30px; /* Checkbox */
     text-align: center;
-    width: 30px;
     padding: 8px 5px;
 }
 
-/* Estilo para a coluna SEQ */
-.seq-col {
-    width: 50px;
+/* Coluna SEQ (2ª coluna) */
+th.seq-col, td.seq-col {
+    width: 60px;
     text-align: center;
     background-color: #f2f2f2;
 }
@@ -212,53 +216,69 @@ td.seq-col {
     color: #555;
 }
 
-/* Estilos para a coluna NÍVEL */
-.nivel-col {
-    width: 60px;
+/* Coluna NÍVEL (3ª coluna) - Agora com a classe nivel-col no HTML */
+th.nivel-col, td.nivel-col {
+    width: 80px;
     text-align: center;
     background-color: #f2f2f2;
 }
 
-/* Regras para indentação baseadas no nível (Cores atualizadas) */
-.nivel-1 {
-    background-color: #7CFC00 !important; /* Verde Grama (era Nível 3, agora 1) */
+
+/* --- AJUSTES DAS LARGURAS SOLICITADAS (Com base no index.html corrigido) --- */
+
+/* Coluna SITE (4ª coluna) */
+th:nth-child(4), td:nth-child(4) {
+    width: 50px; /* Aproximadamente 4 caracteres */
 }
 
-.nivel-2 {
-    background-color: #CD5C5C !important; /* Vermelho Indiano */
+/* Coluna CÓDIGO_MATERIAL (6ª coluna) */
+th:nth-child(6), td:nth-child(6) {
+    width: 350px; /* Aproximadamente 50 caracteres */
 }
 
-.nivel-3 {
-    background-color: #B3E6B3 !important; /* Verde Pastel (novo Nível 3) */
+/* Coluna LINHA (8ª coluna) */
+th:nth-child(8), td:nth-child(8) {
+    width: 60px; /* Aproximadamente 5 caracteres */
 }
 
-.nivel-4 {
-    background-color: #FFD700 !important; /* Ouro */
+/* Coluna QTDE_MONTAGEM (10ª coluna) */
+th:nth-child(10), td:nth-child(10) {
+    width: 140px; /* Aproximadamente 20 caracteres */
 }
 
-.nivel-5 {
-    background-color: #8A2BE2 !important; /* Azul Violeta */
+/* --- FIM DOS AJUSTES SOLICITADOS --- */
+
+/* Larguras para outras colunas para distribuir o espaço, baseadas na nova ordem */
+th:nth-child(5), td:nth-child(5) { /* ALTERNATIVA (5ª coluna) */
+    width: 90px;
+}
+th:nth-child(7), td:nth-child(7) { /* TIPO ESTRUTURA (7ª coluna) */
+    width: 120px;
+}
+th:nth-child(9), td:nth-child(9) { /* ITEM_COMPONENTE (9ª coluna) */
+    width: 180px;
+}
+th:nth-child(11), td:nth-child(11) { /* UNIDADE DE MEDIDA (11ª coluna) */
+    width: 100px;
+}
+th:nth-child(12), td:nth-child(12) { /* FATOR_SUCATA (12ª coluna) */
+    width: 100px;
 }
 
-.nivel-6 {
-    background-color: #FF8C00 !important; /* Laranja Escuro */
-}
 
-.nivel-7 {
-    background-color: #00CED1 !important; /* Turquesa Escuro */
-}
-
-.nivel-8 {
-    background-color: #FF69B4 !important; /* Rosa Choque */
-}
-
-.nivel-9 {
-    background-color: #9ACD32 !important; /* Verde Amarelado */
-}
-
-.nivel-10 {
-    background-color: #DA70D6 !important; /* Orquídea */
-}
+/* Regras para indentação baseadas no nível (Cores padrão) */
+/* Regras para indentação baseadas no nível (Cores atualizadas para bater com script.js) */
+.nivel-1 { background-color: #4664cf !important; } /* Azul anil */
+.nivel-2 { background-color: #CD5C5C !important; } /* Vermelho Indiano */
+.nivel-3 { background-color: #B3E6B3 !important; } /* Verde Pastel */
+.nivel-4 { background-color: #FFD700 !important; } /* Ouro */
+.nivel-5 { background-color: #8A2BE2 !important; } /* Azul Violeta */
+.nivel-6 { background-color: #FF8C00 !important; } /* Laranja Escuro */
+.nivel-7 { background-color: #00CED1 !important; } /* Turquesa Escuro */
+.nivel-8 { background-color: #FF69B4 !important; } /* Rosa Choque */
+.nivel-9 { background-color: #9ACD32 !important; } /* Verde Amarelado */
+.nivel-10 { background-color: #DA70D6 !important; } /* Orquídea */
+/* Adicione mais níveis se necessário, seguindo o padrão */
 
 /* Classe para o destaque de duplicatas (roxo claro) */
 .highlight-duplicate {
@@ -266,12 +286,14 @@ td.seq-col {
 }
 
 /* Para ocultar a coluna SEQ (controlado por JS) */
-.seq-col.hidden {
+.seq-col-hidden th.seq-col,
+.seq-col-hidden td.seq-col {
     display: none;
 }
 
 /* Para ocultar a coluna NÍVEL (controlado por JS) */
-.nivel-col.hidden {
+.nivel-col-hidden th.nivel-col,
+.nivel-col-hidden td.nivel-col {
     display: none;
 }
 
@@ -287,14 +309,59 @@ td.seq-col {
     outline: none !important;
 }
 
-/* Classes para controlar a visibilidade da coluna SEQ via JS */
-.seq-col-hidden th.seq-col,
-.seq-col-hidden td.seq-col {
-    display: none;
+/* Responsividade básica para a tabela */
+@media (max-width: 768px) {
+    .table-container {
+        overflow-x: auto;
+    }
+
+    /* Reduzir padding para telas menores */
+    th, td {
+        padding: 6px 8px;
+    }
+
+    /* Ajustes específicos para telas pequenas */
+    th:nth-child(4), td:nth-child(4) { /* SITE */
+        width: 40px;
+    }
+    th:nth-child(6), td:nth-child(6) { /* CÓDIGO_MATERIAL */
+        width: 200px;
+    }
+    th:nth-child(8), td:nth-child(8) { /* LINHA */
+        width: 50px;
+    }
+    th:nth-child(10), td:nth-child(10) { /* QTDE_MONTAGEM */
+        width: 100px;
+    }
+
+    /* Reduzir largura das colunas SEQ e NÍVEL em telas menores */
+    th.seq-col, td.seq-col { width: 50px; }
+    th.nivel-col, td.nivel-col { width: 70px; }
 }
 
-/* Classes para controlar a visibilidade da coluna NÍVEL via JS */
-.nivel-col-hidden th.nivel-col,
-.nivel-col-hidden td.nivel-col {
-    display: none;
+/* Adicionando alguns estilos para os controles de pintura e filtro para um layout mais limpo */
+.painting-controls, .filter-controls {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 15px;
+}
+
+.painting-controls > div, .filter-controls > div {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+}
+
+.painting-controls h3, .filter-controls h3 {
+    flex-basis: 100%;
+    margin-bottom: 10px;
+}
+
+/* Ajustes finos para os botões e checkboxes dentro dos controles */
+.painting-controls .paint-btn,
+.filter-controls button,
+.filter-controls label {
+    margin-right: 5px;
 }

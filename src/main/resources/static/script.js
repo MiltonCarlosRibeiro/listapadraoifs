@@ -10,7 +10,7 @@ let hoverEffectAtivo = true; // Estado inicial da régua do mouse
 
 // Definição das cores para os níveis (ATUALIZADAS - CORRIGIDO NÍVEL 3)
 const nivelColors = [
-    "#7CFC00", // Nível 1 - Verde Grama (era Nível 3, agora 1)
+    "#4664cf", // Nível 1 - Azul anil
     "#CD5C5C", // Nível 2 - Vermelho Indiano
     "#B3E6B3", // Nível 3 - Verde Pastel (derivado do azul original do Nível 1, com tom abaixado para pastel)
     "#FFD700", // Nível 4 - Ouro
