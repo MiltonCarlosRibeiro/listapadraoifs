@@ -711,6 +711,8 @@ document.getElementById("toggleHoverEffectBtn").addEventListener("click", () => 
 });
 //comeca
 
+// ... (resto do seu script.js, sem alterações nas demais funções)
+
 async function handlePasteMultipleLines(event) {
     const targetCell = event.target;
     const td = targetCell.closest("td");
@@ -718,17 +720,14 @@ async function handlePasteMultipleLines(event) {
     const rowIndex = Array.from(tabela.rows).indexOf(tr);
 
     let columnIndex = -1;
-    // Identifica o índice da coluna onde a colagem foi iniciada
-    const allCellsInRow = Array.from(tr.children); // Converte para Array para usar indexOf
+    const allCellsInRow = Array.from(tr.children);
     columnIndex = allCellsInRow.indexOf(td);
 
-    // Verifica se a célula de destino é um input e se é uma das colunas pasteáveis
     const isPasteableColumn = [2, 5, 8, 9, 10].includes(columnIndex) && targetCell.tagName === 'INPUT';
 
     if (!isPasteableColumn) {
-        return; // Não é uma coluna onde a colagem múltipla é suportada
+        return;
     }
-
 
     if (corSelecionada || demarcarLinha || removerDemarcacao) {
         Swal.fire("Modo de Demarcação Ativo", "Desative o modo de demarcação ou limpe a cor selecionada para colar.", "warning");
@@ -739,12 +738,45 @@ async function handlePasteMultipleLines(event) {
     event.preventDefault();
 
     const pastedText = (event.clipboardData || window.clipboardData).getData("text/plain");
-    const lines = pastedText.trim().split(/\r?\n|\r/).filter(line => line.length > 0);
+    let lines = pastedText.trim().split(/\r?\n|\r/).filter(line => line.length > 0);
 
     if (lines.length === 0) {
         Swal.fire("⚠️ Nada para colar", "Nenhum dado válido encontrado na área de transferência.", "info");
         return;
     }
+
+    // --- NOVA LÓGICA PARA IGNORAR CABEÇALHO ---
+    const firstLine = lines[0].toUpperCase();
+    const isHeaderLikely = (
+        firstLine.includes("ITEM") ||
+        firstLine.includes("COMPONENTE") ||
+        firstLine.includes("QTDE") ||
+        firstLine.includes("QTD") ||  // <-- ESSA LINHA FOI ADICIONADA
+        firstLine.includes("MONTAGEM") ||
+        firstLine.includes("CODIGO") ||
+        firstLine.includes("CÓDIGO") ||
+        firstLine.includes("UNIDADE") ||
+        firstLine.includes("MEDIDA") ||
+        firstLine.includes("FATOR") ||
+        firstLine.includes("SUCATA") ||
+        firstLine.includes("NIVEL") ||
+        firstLine.includes("NÍVEL") ||
+        firstLine.includes("SITE") ||
+        firstLine.includes("ALTERNATIVA") ||
+        firstLine.includes("TIPO") ||
+        firstLine.includes("ESTRUTURA") ||
+        firstLine.includes("LINHA")
+    );
+
+    // Se houver mais de uma linha e a primeira linha parece um cabeçalho, remova-a
+    if (lines.length > 1 && isHeaderLikely) {
+        lines.shift(); // Remove o primeiro elemento do array (a linha do cabeçalho)
+        if (lines.length === 0) { // Se sobrou nada depois de remover o cabeçalho
+            Swal.fire("⚠️ Nenhum dado para colar", "A área de transferência continha apenas cabeçalhos ou estava vazia.", "info");
+            return;
+        }
+    }
+    // --- FIM DA NOVA LÓGICA ---
 
     const result = await Swal.fire({
         title: "Confirmar colagem?",
@@ -783,8 +815,7 @@ async function handlePasteMultipleLines(event) {
 
         const inputToUpdate = targetRow.querySelectorAll("td")[columnIndex]?.querySelector("input");
         if (inputToUpdate) {
-            // Lógica para aplicar toLowerCase ou toUpperCase na colagem
-            if (columnIndex === 10) { // Coluna da UNIDADE DE MEDIDA (índice 10)
+            if (columnIndex === 10) {
                 inputToUpdate.value = lines[i].toLowerCase();
             } else {
                 inputToUpdate.value = lines[i].toUpperCase();
@@ -800,6 +831,13 @@ async function handlePasteMultipleLines(event) {
     verificarDuplicatas();
     Swal.fire("✅ Colagem concluída", `${lines.length} itens colados com sucesso!`, "success");
 }
+
+// ... (resto do seu script.js)
+
+
+
+
+
 //termina
 document.getElementById("listaTabela").addEventListener("paste", handlePasteMultipleLines);
 
