@@ -22,7 +22,6 @@ const nivelColors = [
     "#DA70D6"  // Nível 10 - Orquídea
 ];
 
-const unidades = ["un", "cj", "kg", "mm", "m"];
 const tiposEstrutura = ["Manufatura", "Comprado", ""];
 const fatorSucata = ["0", "15", ""];
 const linhaValores = Array.from({ length: 80 }, (_, i) => String((i + 1) * 10));
@@ -35,23 +34,29 @@ function inputCell(type, readOnly = false, value = "", isPasteTarget = false, cl
     const input = document.createElement("input");
     input.type = type;
     input.readOnly = readOnly;
-    input.value = (value || "").toUpperCase();
-    if (className) td.classList.add(className); // Adiciona a classe à TD para CSS de nível
+    input.value = (value || ""); // O valor inicial não é forçado para maiúscula aqui
+
+    if (className) {
+        td.classList.add(className);
+    }
 
     input.addEventListener("input", (e) => {
-        e.target.value = e.target.value.toUpperCase();
+        // Verifica se o pai do input (td) tem a classe "unidade-medida-col"
+        if (e.target.closest('td').classList.contains('unidade-medida-col')) {
+            e.target.value = e.target.value.toLowerCase(); // Converte para minúsculas para este campo
+        } else {
+            e.target.value = e.target.value.toUpperCase(); // Mantém maiúsculas para outros campos
+        }
         verificarDuplicatas();
-        if (td.classList.contains('nivel-col')) { // Se for a coluna de nível, aplica indentação
+        if (td.classList.contains('nivel-col')) {
             aplicarIndentacao(e.target.closest('tr'));
-            // Dispara um evento personalizado para notificar o filtro sobre a mudança
             e.target.dispatchEvent(new Event('change', { bubbles: true }));
         }
     });
 
-    // === Nova lógica para navegação com Enter ===
     input.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') {
-            e.preventDefault(); // Impede o comportamento padrão do Enter (ex: submit de formulário)
+            e.preventDefault();
 
             const currentInput = e.target;
             const currentTd = currentInput.closest('td');
@@ -59,7 +64,6 @@ function inputCell(type, readOnly = false, value = "", isPasteTarget = false, cl
             const currentRowIndex = Array.from(tabela.rows).indexOf(currentRow);
             const currentCellIndex = Array.from(currentRow.children).indexOf(currentTd);
 
-            // Tenta focar no input da mesma coluna na próxima linha
             const nextRow = tabela.rows[currentRowIndex + 1];
             if (nextRow) {
                 const nextTd = nextRow.children[currentCellIndex];
@@ -67,7 +71,6 @@ function inputCell(type, readOnly = false, value = "", isPasteTarget = false, cl
                 if (nextInput) {
                     nextInput.focus();
                 } else {
-                    // Se não encontrar input na mesma coluna na próxima linha, tenta a próxima célula na linha atual
                     const nextCellInRow = currentRow.children[currentCellIndex + 1];
                     const nextInputInRow = nextCellInRow?.querySelector('input, select');
                     if (nextInputInRow) {
@@ -75,13 +78,11 @@ function inputCell(type, readOnly = false, value = "", isPasteTarget = false, cl
                     }
                 }
             } else {
-                // Se for a última linha, cria uma nova linha e foca no primeiro input
                 const newRow = criarLinhaVazia();
                 tabela.appendChild(newRow);
                 atualizarSequencias();
                 verificarDuplicatas();
 
-                // Foca no input da mesma coluna na nova linha
                 const firstInputInNewRow = newRow.children[currentCellIndex]?.querySelector('input, select');
                 if (firstInputInNewRow) {
                     firstInputInNewRow.focus();
@@ -89,11 +90,9 @@ function inputCell(type, readOnly = false, value = "", isPasteTarget = false, cl
             }
         }
     });
-    // ===========================================
 
-    // Evento de clique para pintura de célula (com nova lógica)
     input.addEventListener("click", (e) => {
-        if (!demarcarLinha) { // Se não for para demarcar a linha inteira
+        if (!demarcarLinha) {
             if (removerDemarcacao) {
                 e.target.closest("td").style.backgroundColor = "";
             } else if (corSelecionada) {
@@ -105,7 +104,6 @@ function inputCell(type, readOnly = false, value = "", isPasteTarget = false, cl
             }
         }
     });
-
 
     td.appendChild(input);
     return td;
@@ -124,9 +122,8 @@ function selectCell(options = [], selected = "", className = "") {
     });
     select.addEventListener("change", verificarDuplicatas);
 
-    // Evento de clique para pintura de célula (com nova lógica)
     select.addEventListener("click", (e) => {
-        if (!demarcarLinha) { // Se não for para demarcar a linha inteira
+        if (!demarcarLinha) {
             if (removerDemarcacao) {
                 e.target.closest("td").style.backgroundColor = "";
             } else if (corSelecionada) {
@@ -139,10 +136,9 @@ function selectCell(options = [], selected = "", className = "") {
         }
     });
 
-    // === Nova lógica para navegação com Enter em selects ===
     select.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') {
-            e.preventDefault(); // Impede o comportamento padrão do Enter
+            e.preventDefault();
 
             const currentSelect = e.target;
             const currentTd = currentSelect.closest('td');
@@ -157,7 +153,6 @@ function selectCell(options = [], selected = "", className = "") {
                 if (nextInput) {
                     nextInput.focus();
                 } else {
-                    // Se não encontrar, tenta a próxima célula na linha atual
                     const nextCellInRow = currentRow.children[currentCellIndex + 1];
                     const nextInputInRow = nextCellInRow?.querySelector('input, select');
                     if (nextInputInRow) {
@@ -177,7 +172,6 @@ function selectCell(options = [], selected = "", className = "") {
             }
         }
     });
-    // ===========================================
 
     td.appendChild(select);
     return td;
@@ -209,7 +203,6 @@ function criarLinha(v = {}) {
             if (removerDemarcacao) {
                 row.style.backgroundColor = "";
             } else if (corSelecionada) {
-                // Se a linha já tem a cor selecionada, remove
                 if (rgbToHex(row.style.backgroundColor) === corSelecionada.toUpperCase()) {
                     row.style.backgroundColor = "";
                 } else {
@@ -225,14 +218,18 @@ function criarLinha(v = {}) {
     row.appendChild(selectCell(tiposEstrutura, v.TIPO_ESTRUTURA || "Manufatura"));
     row.appendChild(selectCell(linhaValores, v.LINHA || "10"));
     row.appendChild(inputCell("text", false, v.ITEM_COMPONENTE || "", true));
-    // ALTERAÇÃO: QTDE_MONTAGEM inicia vazio
-    row.appendChild(inputCell("text", false, v.QTDE_MONTAGEM || "")); // Alterado para vazio
-    row.appendChild(selectCell(unidades, v.UNIDADE_MEDIDA || "un"));
+    row.appendChild(inputCell("text", false, v.QTDE_MONTAGEM || ""));
+    // UNIDADE_MEDIDA como inputCell com classe
+    row.appendChild(inputCell("text", false, v.UNIDADE_MEDIDA || "", true, "unidade-medida-col"));
     row.appendChild(selectCell(fatorSucata, v.FATOR_SUCATA || "0"));
+
+    // Console.log para depuração: Valor da UNIDADE_MEDIDA ao criar a linha
+    console.log("criarLinha: UNIDADE_MEDIDA passada:", v.UNIDADE_MEDIDA);
+    // Para ver o input recém-criado, você precisaria de um pequeno delay ou inspecionar manualmente
+    // pois o elemento só é anexado ao DOM depois.
 
     aplicarIndentacao(row);
 
-    // Garante que as colunas de SEQ e Nível respeitem o estado inicial
     if (!seqAtivo) {
         seqTd.style.display = "none";
     }
@@ -258,7 +255,6 @@ function atualizarSequencias() {
 }
 
 function aplicarIndentacao(row) {
-    // Remove todas as classes de nível existentes
     for (let i = 1; i <= 10; i++) {
         row.classList.remove(`nivel-${i}`);
     }
@@ -289,7 +285,7 @@ function getLinhaData(tr) {
         LINHA: cells[7]?.querySelector("select")?.value || "",
         ITEM_COMPONENTE: cells[8]?.querySelector("input")?.value.trim().toUpperCase() || "",
         QTDE_MONTAGEM: cells[9]?.querySelector("input")?.value.trim() || "",
-        UNIDADE_MEDIDA: cells[10]?.querySelector("select")?.value || "",
+        UNIDADE_MEDIDA: cells[10]?.querySelector("input")?.value.trim().toLowerCase() || "", // Converte para minúsculas ao obter
         FATOR_SUCATA: cells[11]?.querySelector("select")?.value || ""
     };
 }
@@ -304,9 +300,12 @@ function preencherLinha(row, data) {
     cells[6].querySelector("select").value = data.TIPO_ESTRUTURA || "Manufatura";
     cells[7].querySelector("select").value = data.LINHA || "10";
     cells[8].querySelector("input").value = (data.ITEM_COMPONENTE || "").toUpperCase();
-    // ALTERAÇÃO: QTDE_MONTAGEM preenchimento. Se for "0", deixa vazio.
     cells[9].querySelector("input").value = (data.QTDE_MONTAGEM === "0" ? "" : data.QTDE_MONTAGEM || "").replace(",", ".");
-    cells[10].querySelector("select").value = data.UNIDADE_MEDIDA || "un";
+    // Preenche o input diretamente com o valor (já em minúsculas se veio do Excel ou getLinhaData)
+    cells[10].querySelector("input").value = data.UNIDADE_MEDIDA || "";
+    // Console.log para depuração: Valor da UNIDADE_MEDIDA ao preencher o input
+    console.log("preencherLinha: UNIDADE_MEDIDA preenchida no input (index 10):", data.UNIDADE_MEDIDA);
+
     cells[11].querySelector("select").value = data.FATOR_SUCATA || "0";
 }
 
@@ -314,7 +313,6 @@ function verificarDuplicatas() {
     const linhas = Array.from(tabela.rows);
     const hashes = new Map();
 
-    // Primeiro, remove a classe de duplicidade de todas as linhas
     linhas.forEach(row => {
         row.classList.remove("highlight-duplicate");
     });
@@ -323,13 +321,11 @@ function verificarDuplicatas() {
         return;
     }
 
-    // Em seguida, verifica e aplica a cor de duplicidade
     linhas.forEach((tr) => {
         const data = getLinhaData(tr);
 
         if (data.CODIGO_MATERIAL === "" && data.ITEM_COMPONENTE === "") return;
 
-        // ALTERAÇÃO: QTDE_MONTAGEM removido do hash para ignorá-lo na verificação de duplicatas
         const hash = `${data.SITE}|${data.ALTERNATIVA}|${data.CODIGO_MATERIAL}|${data.NIVEL}|${data.TIPO_ESTRUTURA}|${data.LINHA}|${data.ITEM_COMPONENTE}|${data.UNIDADE_MEDIDA}|${data.FATOR_SUCATA}`;
 
         if (!hashes.has(hash)) hashes.set(hash, []);
@@ -339,13 +335,11 @@ function verificarDuplicatas() {
     for (const [hash, rows] of hashes) {
         if (rows.length > 1) {
             rows.forEach(row => {
-                // ALTERAÇÃO: Adiciona a classe diretamente. CSS cuidará da precedência com !important.
                 row.classList.add("highlight-duplicate");
             });
         }
     }
 }
-
 
 function rgbToHex(rgb) {
     if (!rgb || rgb.indexOf('rgb') === -1) {
@@ -362,7 +356,6 @@ function rgbToHex(rgb) {
 }
 
 
-// EVENTOS
 document.getElementById("criarListaBtn").addEventListener("click", () => {
     tabela.innerHTML = "";
     criar10Linhas();
@@ -440,7 +433,6 @@ document.getElementById("copiarSelecionadoBtn").addEventListener("click", () => 
     Swal.fire("📋 Copiado", `${cacheCopiado.length} linha(s) copiadas.`, "success");
 });
 
-
 document.getElementById("colarBtn").addEventListener("click", () => {
     if (cacheCopiado.length === 0) {
         Swal.fire("⚠️ Nada para colar", "Copie algo primeiro.", "info");
@@ -456,7 +448,6 @@ document.getElementById("colarBtn").addEventListener("click", () => {
     const trBase = selecionados[0].closest("tr");
     let index = Array.from(tabela.rows).indexOf(trBase);
 
-    // ALTERAÇÃO: Adicionar SweetAlert antes de colar
     Swal.fire({
         title: "Colando dados...",
         text: `Serão colados ${cacheCopiado.length} itens a partir da linha ${index + 1}.`,
@@ -489,14 +480,11 @@ document.getElementById("salvarListaBtn").addEventListener("click", () => {
     }
     const ws = XLSX.utils.json_to_sheet(dados);
 
-    // Ajustes de largura de coluna para o Excel
     ws['!cols'] = ws['!cols'] || [];
-    // Adiciona Largura para as colunas: Nível (index 2) e SEQ (index 1)
-    ws['!cols'][2] = { wch: 5 }; // Nível
-    ws['!cols'][1] = { wch: 5 }; // SEQ
-    // Adiciona Largura para Código Material e Item Componente
-    ws['!cols'][5] = { wch: 20 }; // CODIGO_MATERIAL
-    ws['!cols'][8] = { wch: 20 }; // ITEM_COMPONENTE
+    ws['!cols'][2] = { wch: 5 };
+    ws['!cols'][1] = { wch: 5 };
+    ws['!cols'][5] = { wch: 20 };
+    ws['!cols'][8] = { wch: 20 };
 
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "ListaIFS");
@@ -522,6 +510,23 @@ document.getElementById("inputFile").addEventListener("change", async (e) => {
         const workbook = XLSX.read(data, { type: "array" });
         const sheet = workbook.Sheets[workbook.SheetNames[0]];
         const json = XLSX.utils.sheet_to_json(sheet);
+
+        // --- CONSOLE.LOGS CRUCIAIS PARA DEPURAR A UNIDADE_MEDIDA ---
+        console.log("----- INÍCIO DA LEITURA DO ARQUIVO EXCEL -----");
+        console.log("JSON original do Excel (primeiras linhas para exemplo):", json.slice(0, 5)); // Mostra as primeiras 5 linhas
+        console.log("Nomes das chaves nas primeiras linhas (para UNIDADE_MEDIDA):");
+        json.slice(0, 5).forEach((row, index) => {
+            let umKey = 'NÃO ENCONTRADO';
+            for (const key in row) {
+                if (key.toLowerCase().includes('unidade') && key.toLowerCase().includes('medida')) {
+                    umKey = key;
+                    break;
+                }
+            }
+            console.log(`Linha ${index + 1}: Chave para Unidade de Medida: "${umKey}" (Valor: "${row[umKey]}")`);
+        });
+        // --- FIM DOS CONSOLE.LOGS CRUCIAIS ---
+
         tabela.innerHTML = "";
 
         json.forEach(rowData => {
@@ -533,11 +538,24 @@ document.getElementById("inputFile").addEventListener("change", async (e) => {
                 TIPO_ESTRUTURA: rowData["TIPO ESTRUTURA"] || rowData.Tipo_Estrutura || rowData.TipoEstrutura || "Manufatura",
                 LINHA: String(rowData.LINHA || rowData.Linha || "10"),
                 ITEM_COMPONENTE: rowData.ITEM_COMPONENTE || rowData.Item_Componente || rowData.ItemComponente || "",
-                // ALTERAÇÃO: Se QTDE_MONTAGEM vier como "0" na importação, deixa vazio.
                 QTDE_MONTAGEM: String(rowData.QTDE_MONTAGEM || rowData.Qtde_Montagem || rowData.QtdeMontagem || ""),
-                UNIDADE_MEDIDA: rowData["UNIDADE DE MEDIDA"] || rowData.Unidade_Medida || rowData.UnidadeMedida || "un",
+                // Tentativa mais robusta de pegar a UNIDADE_MEDIDA
+                UNIDADE_MEDIDA: (
+                    rowData["UNIDADE DE MEDIDA"] ||
+                    rowData["UNIDADE_DE_MEDIDA"] || // Adicionado, caso tenha underscore
+                    rowData["UNIDADE_MEDIDA"] ||     // Adicionado, caso seja sem "DE"
+                    rowData.Unidade_Medida ||
+                    rowData.UnidadeMedida ||
+                    // Se o cabeçalho no Excel for, por exemplo, "UM", adicione aqui:
+                    // rowData.UM ||
+                    ""
+                ).toLowerCase(), // Converte para minúsculas ao carregar
                 FATOR_SUCATA: String(rowData.FATOR_SUCATA || rowData.Fator_Sucata || rowData.FatorSucata || "0")
             };
+
+            // Console.log para depuração: Mapped Data final
+            console.log("Mapped Data para a linha:", mappedData);
+
             const novaLinha = criarLinha(mappedData);
             tabela.appendChild(novaLinha);
         });
@@ -546,7 +564,7 @@ document.getElementById("inputFile").addEventListener("change", async (e) => {
         verificarDuplicatas();
         Swal.fire("✅ Lista carregada", "A tabela foi preenchida com sucesso.", "success");
     } catch (error) {
-        console.error("Erro ao carregar o arquivo:", error);
+        console.error("❌ Erro ao carregar o arquivo:", error);
         Swal.fire("❌ Erro", "Não foi possível carregar a lista. Verifique o formato do arquivo ou o console para detalhes.", "error");
     } finally {
         e.target.value = '';
@@ -554,15 +572,14 @@ document.getElementById("inputFile").addEventListener("change", async (e) => {
 });
 
 const nivelColorButtonsContainer = document.getElementById("nivelColorButtons");
-// Limpa os botões existentes antes de recriar
 nivelColorButtonsContainer.innerHTML = '';
 nivelColors.forEach((color, index) => {
     const button = document.createElement("button");
     button.className = `paint-btn btn-nivel-${index + 1}`;
     button.dataset.color = color;
     button.textContent = index + 1;
-    button.style.backgroundColor = color; // Aplica a cor diretamente ao background do botão
-    button.style.color = getContrastYIQ(color); // Define a cor do texto para contraste
+    button.style.backgroundColor = color;
+    button.style.color = getContrastYIQ(color);
     button.addEventListener("click", function() {
         corSelecionada = this.dataset.color;
         document.getElementById("removerDemarcacaoCheckbox").checked = false;
@@ -578,13 +595,12 @@ nivelColors.forEach((color, index) => {
     nivelColorButtonsContainer.appendChild(button);
 });
 
-// Cores de Atenção
 document.querySelectorAll("#attentionColorButtons .paint-btn").forEach(button => {
     button.addEventListener("click", function() {
         corSelecionada = this.dataset.color;
         document.getElementById("removerDemarcacaoCheckbox").checked = false;
         removerDemarcacao = false;
-        const labelText = this.textContent; // Pega o texto do botão
+        const labelText = this.textContent;
         Swal.fire({
             title: `Cor "${labelText}" selecionada!`,
             text: `Clique na ${demarcarLinha ? 'linha' : 'célula'} que deseja pintar.`,
@@ -607,7 +623,7 @@ document.getElementById("demarcarLinhaCheckbox").addEventListener("change", func
 document.getElementById("removerDemarcacaoCheckbox").addEventListener("change", function() {
     removerDemarcacao = this.checked;
     if (removerDemarcacao) {
-        corSelecionada = ""; // Limpa a cor selecionada para o modo de remoção
+        corSelecionada = "";
         Swal.fire("Modo 'Remover demarcação' ativado!", "Agora, cliques removerão as demarcações existentes. Selecione um botão de cor para sair deste modo.", "warning");
     } else {
         Swal.fire("Modo 'Remover demarcação' desativado!", "Pode voltar a demarcar.", "info");
@@ -620,11 +636,9 @@ document.getElementById("clearPaintBtn").addEventListener("click", () => {
     demarcarLinha = false;
     document.getElementById("demarcarLinhaCheckbox").checked = false;
     removerDemarcacao = false;
-    // Limpa TODAS as demarcações ao clicar neste botão
     const allCells = tabela.querySelectorAll("td");
     const allRows = tabela.querySelectorAll("tr");
     allCells.forEach(cell => cell.style.backgroundColor = "");
-    // Remove a classe de duplicidade para garantir que todas as cores são limpas
     allRows.forEach(row => {
         row.style.backgroundColor = "";
         row.classList.remove("highlight-duplicate");
@@ -635,7 +649,7 @@ document.getElementById("clearPaintBtn").addEventListener("click", () => {
 
 document.getElementById("ignorarDuplicatasCheckbox").addEventListener("change", function() {
     ignorarDuplicatas = this.checked;
-    verificarDuplicatas(); // Recalcula e aplica/remove o destaque
+    verificarDuplicatas();
     if (ignorarDuplicatas) {
         Swal.fire("Destaque de duplicatas desativado!", "As linhas duplicadas não serão mais destacadas com roxo claro.", "info", 2000);
     } else {
@@ -650,10 +664,9 @@ document.getElementById("toggleAllCheckboxesHeader").addEventListener("change", 
     });
 });
 
-
 document.getElementById("toggleSeqBtn").addEventListener("click", () => {
     const tabelaElement = document.getElementById("listaTabela");
-    seqAtivo = !seqAtivo; // Inverte o estado
+    seqAtivo = !seqAtivo;
 
     if (seqAtivo) {
         tabelaElement.classList.remove("seq-col-hidden");
@@ -666,7 +679,7 @@ document.getElementById("toggleSeqBtn").addEventListener("click", () => {
 
 document.getElementById("toggleNivelColBtn").addEventListener("click", () => {
     const tabelaElement = document.getElementById("listaTabela");
-    nivelColVisivel = !nivelColVisivel; // Inverte o estado
+    nivelColVisivel = !nivelColVisivel;
 
     if (nivelColVisivel) {
         tabelaElement.classList.remove("nivel-col-hidden");
@@ -679,59 +692,51 @@ document.getElementById("toggleNivelColBtn").addEventListener("click", () => {
 
 document.getElementById("toggleHoverEffectBtn").addEventListener("click", () => {
     const tabelaElement = document.getElementById("listaTabela");
-    hoverEffectAtivo = !hoverEffectAtivo; // Inverte o estado da régua
+    hoverEffectAtivo = !hoverEffectAtivo;
 
     if (hoverEffectAtivo) {
         tabelaElement.classList.remove("no-hover-effect");
-        tabelaElement.classList.add("hover-effect"); // Garante que a classe de hover está presente
+        tabelaElement.classList.add("hover-effect");
         Swal.fire("Régua Ativada!", "O destaque da linha ao passar o mouse está ativo.", "info", 1500);
     } else {
-        tabelaElement.classList.remove("hover-effect"); // Remove a classe de hover
+        tabelaElement.classList.remove("hover-effect");
         tabelaElement.classList.add("no-hover-effect");
-        // Limpar qualquer régua ativa ao desativar
         document.querySelectorAll("#listaTabela tbody tr").forEach(row => {
-            // Verifica se a cor de fundo é a cor da régua antes de limpar, para não afetar demarcações manuais
-            if (rgbToHex(row.style.backgroundColor) === "#FFE0B2") { // Cor da régua: #ffe0b2
+            if (rgbToHex(row.style.backgroundColor) === "#FFE0B2") {
                 row.style.backgroundColor = "";
             }
         });
         Swal.fire("Régua Desativada!", "O destaque da linha foi removido.", "info", 1500);
     }
 });
-
+//comeca
 
 async function handlePasteMultipleLines(event) {
-    // Permite colar apenas em células de input onde o `isPasteTarget` é true
     const targetCell = event.target;
     const td = targetCell.closest("td");
     const tr = targetCell.closest("tr");
     const rowIndex = Array.from(tabela.rows).indexOf(tr);
 
     let columnIndex = -1;
-    const allCellsInRow = tr.querySelectorAll("td");
+    // Identifica o índice da coluna onde a colagem foi iniciada
+    const allCellsInRow = Array.from(tr.children); // Converte para Array para usar indexOf
+    columnIndex = allCellsInRow.indexOf(td);
 
-    // Verifica se o targetCell é um input dentro de um td com uma classe específica
-    if (targetCell === allCellsInRow[2]?.querySelector("input")) { // NÍVEL (index 2)
-        columnIndex = 2;
-    } else if (targetCell === allCellsInRow[5]?.querySelector("input")) { // CÓDIGO_MATERIAL (index 5)
-        columnIndex = 5;
-    } else if (targetCell === allCellsInRow[8]?.querySelector("input")) { // ITEM_COMPONENTE (index 8)
-        columnIndex = 8;
-    } else if (targetCell === allCellsInRow[9]?.querySelector("input")) { // QTDE_MONTAGEM (index 9)
-        columnIndex = 9;
-    } else {
-        // Se não for uma das colunas permitidas para colagem, impede o evento padrão
-        return;
+    // Verifica se a célula de destino é um input e se é uma das colunas pasteáveis
+    const isPasteableColumn = [2, 5, 8, 9, 10].includes(columnIndex) && targetCell.tagName === 'INPUT';
+
+    if (!isPasteableColumn) {
+        return; // Não é uma coluna onde a colagem múltipla é suportada
     }
 
-    // Se qualquer modo de demarcação ou cor estiver selecionado, impede a colagem
+
     if (corSelecionada || demarcarLinha || removerDemarcacao) {
         Swal.fire("Modo de Demarcação Ativo", "Desative o modo de demarcação ou limpe a cor selecionada para colar.", "warning");
         event.preventDefault();
         return;
     }
 
-    event.preventDefault(); // Impede a colagem padrão
+    event.preventDefault();
 
     const pastedText = (event.clipboardData || window.clipboardData).getData("text/plain");
     const lines = pastedText.trim().split(/\r?\n|\r/).filter(line => line.length > 0);
@@ -741,7 +746,6 @@ async function handlePasteMultipleLines(event) {
         return;
     }
 
-    // ALTERAÇÃO: SweetAlert de confirmação com a quantidade de itens.
     const result = await Swal.fire({
         title: "Confirmar colagem?",
         text: `Você está prestes a colar ${lines.length} item(ns).`,
@@ -779,8 +783,14 @@ async function handlePasteMultipleLines(event) {
 
         const inputToUpdate = targetRow.querySelectorAll("td")[columnIndex]?.querySelector("input");
         if (inputToUpdate) {
-            inputToUpdate.value = lines[i].toUpperCase();
-            if (columnIndex === 2) { // Se a coluna de nível foi colada, aplica indentação
+            // Lógica para aplicar toLowerCase ou toUpperCase na colagem
+            if (columnIndex === 10) { // Coluna da UNIDADE DE MEDIDA (índice 10)
+                inputToUpdate.value = lines[i].toLowerCase();
+            } else {
+                inputToUpdate.value = lines[i].toUpperCase();
+            }
+
+            if (columnIndex === 2) {
                 aplicarIndentacao(targetRow);
             }
         }
@@ -790,12 +800,9 @@ async function handlePasteMultipleLines(event) {
     verificarDuplicatas();
     Swal.fire("✅ Colagem concluída", `${lines.length} itens colados com sucesso!`, "success");
 }
-
-// Adiciona o event listener para o paste em toda a tabela
+//termina
 document.getElementById("listaTabela").addEventListener("paste", handlePasteMultipleLines);
 
-
-// Função para determinar a cor do texto para contraste
 function getContrastYIQ(hexcolor) {
     var r = parseInt(hexcolor.substr(1, 2), 16);
     var g = parseInt(hexcolor.substr(3, 2), 16);
@@ -812,7 +819,6 @@ document.addEventListener("DOMContentLoaded", () => {
         Swal.fire("🎉 Bem-vindo!", "A lista foi inicializada com 10 linhas para você começar.", "info");
     }
 
-    // Aplica as classes iniciais de visibilidade das colunas
     const tabelaElement = document.getElementById("listaTabela");
     if (!seqAtivo) {
         tabelaElement.classList.add("seq-col-hidden");
@@ -821,7 +827,6 @@ document.addEventListener("DOMContentLoaded", () => {
         tabelaElement.classList.add("nivel-col-hidden");
     }
 
-    // Inicializa o estado da régua
     if (hoverEffectAtivo) {
         tabelaElement.classList.add("hover-effect");
     } else {
