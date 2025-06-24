@@ -373,45 +373,54 @@ function atualizarSequencias() {
 
 /**
  * Preenche automaticamente a coluna "LINHA" baseando-se no `CODIGO_MATERIAL` e `ITEM_COMPONENTE`.
- * Se um grupo de `CODIGO_MATERIAL` contiver qualquer `ITEM_COMPONENTE` que comece com "MP-",
- * todas as linhas desse grupo terão a "LINHA" definida como "10".
- * Caso contrário, a "LINHA" será uma sequência incremental (10, 20, 30...).
+ *
+ * Regras:
+ * 1. Se o `ITEM_COMPONENTE` de UMA LINHA começar com "MP1-", APENAS ESSA LINHA terá a "LINHA" definida como "10".
+ * Esta regra tem prioridade máxima. O sequenciamento das demais linhas (mesmo do mesmo CODIGO_MATERIAL)
+ * NÃO É AFETADO ou reiniciado por uma linha "MP1-".
+ * 2. Para TODAS AS OUTRAS LINHAS (cujo ITEM_COMPONENTE NÃO começa com "MP1-"):
+ * a. Se um grupo de `CODIGO_MATERIAL` contiver qualquer `ITEM_COMPONENTE` que comece com "MP-" (E NÃO "MP1-"),
+ * todas as linhas desse grupo (exceto as "MP1-") terão a "LINHA" definida como "10".
+ * b. Caso contrário, a "LINHA" será uma sequência incremental (10, 20, 30...) para aquele `CODIGO_MATERIAL`.
+ * O sequenciamento continua de onde parou para o mesmo CODIGO_MATERIAL, ou reinicia em 10 se o CODIGO_MATERIAL mudar.
  */
 function atualizarColunaLinha() {
     const rows = Array.from(tabela.rows);
     const groupedData = new Map(); // Mapa para armazenar grupos de linhas por CODIGO_MATERIAL
 
-    // Primeira passagem: Agrupar linhas e detectar "MP-"
+    // Primeira passagem: Agrupar linhas e detectar "MP-" (AGORA APENAS PARA MP- GERAL, EXCLUINDO MP1-)
     rows.forEach(row => {
         const data = getLinhaData(row);
         const codigoMaterial = data.CODIGO_MATERIAL.trim();
         const itemComponente = data.ITEM_COMPONENTE.trim();
 
-        // Se a linha não tem CODIGO_MATERIAL nem ITEM_COMPONENTE, ela é "vazia" para o cálculo da LINHA
+        // Linhas vazias são ignoradas no agrupamento, mas terão sua LINHA esvaziada.
         if (codigoMaterial === "" && itemComponente === "") {
             const linhaInput = row.querySelectorAll("td")[7]?.querySelector("input");
-            if (linhaInput) linhaInput.value = ""; // Garante que a LINHA fica vazia
-            return;
+            if (linhaInput) linhaInput.value = "";
+            return; // Pula o resto da lógica de agrupamento para linhas vazias
         }
 
-        // Se tem CODIGO_MATERIAL, agrupa por ele
+        // Linhas que são "MP1-" não participam da lógica de agrupamento "MP-General"
+        if (itemComponente.toUpperCase().startsWith("MP1-")) {
+            return; // Pula o resto da lógica de agrupamento para linhas MP1-
+        }
+
+        // Se tem CODIGO_MATERIAL e NÃO é MP1-, agrupa por ele
         if (codigoMaterial !== "") {
             if (!groupedData.has(codigoMaterial)) {
                 groupedData.set(codigoMaterial, {
                     rows: [],
-                    hasMP: false
+                    hasMPGeneral: false // Flag para "MP-" geral (sem ser MP1-)
                 });
             }
             const group = groupedData.get(codigoMaterial);
             group.rows.push(row);
-            if (itemComponente.toUpperCase().startsWith("MP-")) {
-                group.hasMP = true;
+            // Detecta "MP-" (excluindo explicitamente "MP1-") para aplicar a regra de grupo
+            if (itemComponente.toUpperCase().startsWith("MP-")) { // Já sabemos que não é MP1- por causa do 'return' acima
+                group.hasMPGeneral = true;
             }
         }
-        // Caso a linha tenha ITEM_COMPONENTE mas não CODIGO_MATERIAL, ela ainda não pertence a um grupo
-        // e terá sua LINHA vazia, a menos que uma lógica específica para isso seja implementada.
-        // Pelo requisito, parece que CODIGO_MATERIAL é o principal agrupador.
-        // Se ela não for agrupada, será tratada no loop abaixo.
     });
 
     // Segunda passagem: Atribuir valores de LINHA
@@ -426,41 +435,52 @@ function atualizarColunaLinha() {
 
         if (!linhaInput) return; // Se não encontrou o input da LINHA, pula a linha
 
-        // Se a linha é um "separador" (vazia), sua LINHA já foi definida como vazia e reiniciamos a sequência
+        // Se a linha é um "separador" (vazia), sua LINHA já foi definida como vazia.
+        // Reiniciamos a sequência e o material para o próximo grupo.
         if (codigoMaterial === "" && itemComponente === "") {
-            currentCodigoMaterial = ""; // Reseta o material atual
-            currentSequence = 10; // Reinicia a sequência
-            // A LINHA já está vazia, não precisa fazer mais nada
+            currentCodigoMaterial = "";
+            currentSequence = 10;
             return;
         }
 
-        // Se o CODIGO_MATERIAL mudou, ou é o primeiro item de um novo grupo
-        if (codigoMaterial !== "" && codigoMaterial !== currentCodigoMaterial) {
-            currentCodigoMaterial = codigoMaterial; // Define o novo grupo
-            currentSequence = 10; // Reinicia a sequência para este novo grupo
+        // *** REGRA 1: PRIORIDADE MÁXIMA PARA "MP1-" (APENAS PARA A LINHA ESPECÍFICA) ***
+        if (itemComponente.toUpperCase().startsWith("MP1-")) {
+            linhaInput.value = "10"; // Define "10" apenas para ESTA LINHA
+            // IMPORTANTE: NÃO alteramos currentSequence nem currentCodigoMaterial aqui.
+            // Isso garante que a sequência continue para as próximas linhas como se esta não existisse para a contagem.
+            return; // Termina o processamento para esta linha e move para a próxima
         }
 
-        // Se a linha pertence a um grupo com CODIGO_MATERIAL
+        // REGRA 2: Processamento para linhas que NÃO SÃO "MP1-"
         if (codigoMaterial !== "") {
+            // Se o CODIGO_MATERIAL mudou, ou é o primeiro item de um novo grupo
+            // (Isso só acontece se a linha atual NÃO for "MP1-")
+            if (codigoMaterial !== currentCodigoMaterial) {
+                currentCodigoMaterial = codigoMaterial; // Define o novo grupo
+                currentSequence = 10; // Reinicia a sequência para este novo grupo
+            }
+
             const group = groupedData.get(codigoMaterial);
-            if (group && group.hasMP) {
+            // REGRA 2a: Se o grupo tem "MP-" geral (e não é MP1-), todas as linhas recebem 10
+            if (group && group.hasMPGeneral) {
                 linhaInput.value = "10";
-            } else {
+            }
+            // REGRA 2b: Caso contrário, segue o sequenciamento normal
+            else {
                 linhaInput.value = String(currentSequence);
                 currentSequence += 10;
             }
         } else {
-            // Se a linha tem ITEM_COMPONENTE mas não CODIGO_MATERIAL, ou se a lógica não a agrupou
-            // (e não é um "separador" totalmente vazio), sua LINHA pode ser vazia por padrão
-            // ou seguir uma sequência independente se for um caso de uso futuro.
-            // Pelo requisito atual, apenas linhas com CODIGO_MATERIAL definem grupos para a regra "MP-".
-            // Para as outras, manter vazio por padrão.
+            // Se a linha tem ITEM_COMPONENTE mas não CODIGO_MATERIAL,
+            // (e não é um "separador" e não é "MP1-").
+            // Neste caso, se não está agrupado e não tem CODIGO_MATERIAL, o campo LINHA fica vazio.
             linhaInput.value = "";
-            currentSequence = 10; // Reseta a sequência, pois este item não faz parte de um grupo numérico
+            currentSequence = 10; // Reseta a sequência para o próximo grupo válido
             currentCodigoMaterial = "";
         }
     });
 }
+
 
 /**
  * Aplica classes CSS à linha para indentação visual baseada no valor da coluna "NÍVEL".
@@ -609,9 +629,20 @@ function exportarParaExcel() {
     const ws = XLSX.utils.aoa_to_sheet(ws_data); // Cria a planilha a partir do array de arrays
     const wb = XLSX.utils.book_new(); // Cria um novo livro Excel
     XLSX.utils.book_append_sheet(wb, ws, "Lista Tecnica"); // Adiciona a planilha ao livro
-    XLSX.writeFile(wb, "Lista_Tecnica.xlsx"); // Escreve e baixa o arquivo Excel
 
-    Swal.fire("✅ Exportado!", "A lista foi exportada para 'Lista_Tecnica.xlsx'.", "success");
+    // Adição do timestamp ao nome do arquivo
+    const now = new Date();
+    const dateStr = now.getFullYear() + "-" +
+                    String(now.getMonth() + 1).padStart(2, '0') + "-" +
+                    String(now.getDate()).padStart(2, '0') + "_" +
+                    String(now.getHours()).padStart(2, '0') + "-" +
+                    String(now.getMinutes()).padStart(2, '0') + "-" +
+                    String(now.getSeconds()).padStart(2, '0');
+
+    XLSX.writeFile(wb, `Lista_Tecnica_${dateStr}.xlsx`); // Escreve e baixa o arquivo Excel com timestamp
+
+    Swal.fire("✅ Exportado!", `A lista foi exportada para 'Lista_Tecnica_${dateStr}.xlsx'.`, "success"); // Atualiza a mensagem de sucesso
+
 }
 
 /**
@@ -619,6 +650,7 @@ function exportarParaExcel() {
  * Mapeia as colunas do Excel dinamicamente pelos seus cabeçalhos.
  * @param {HTMLInputElement} inputElement - O elemento <input type="file"> que disparou o evento.
  */
+
 function carregarExcel(inputElement) {
     const file = inputElement.files[0];
     if (!file) {
