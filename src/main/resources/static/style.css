@@ -1,6 +1,7 @@
 body {
     font-family: Arial, sans-serif;
-    background-color: #f5f5f5;
+    /*background-color: #f5f5f5;*/
+    background-color: #ededed;
     margin: 0;
     padding: 20px;
     color: #333;
@@ -35,7 +36,7 @@ h1 {
 
 .button-bar button,
 .file-label {
-    background-color: #673ab7;
+    background-color:#a31f35;
     color: #fff;
     border: none;
     padding: 10px 16px;
@@ -47,14 +48,14 @@ h1 {
 
 .button-bar button:hover,
 .file-label:hover {
-    background-color: #5e35b1;
+    background-color: #7d7c7c; /*Cinza claro*/
 }
 
 /* Controles de Pintura */
 .painting-controls {
     margin-top: 15px;
     padding: 15px;
-    background-color: #e8eaf6; /* Azul claro pastel */
+    background-color: #fffcfd; /* Branco*/
     border-radius: 8px;
     display: flex;
     flex-wrap: wrap;
@@ -67,7 +68,7 @@ h1 {
     width: 100%;
     margin-top: 0;
     margin-bottom: 10px;
-    color: #4a148c; /* Roxo escuro */
+    color: #121212; /* Preto */
 }
 
 #nivelColorButtons,
@@ -93,7 +94,7 @@ h1 {
 .filter-controls {
     margin-top: 20px;
     padding: 15px;
-    background-color: #e0f2f7; /* Azul claro pastel */
+    background-color: #fcfcfc; /* Branco */
     border-radius: 8px;
     display: flex;
     flex-wrap: wrap;
@@ -106,7 +107,7 @@ h1 {
     width: 100%;
     margin-top: 0;
     margin-bottom: 10px;
-    color: #006064; /* Ciano escuro */
+    color: #000000; /* Preto */
 }
 
 #checkboxNiveis {
@@ -123,11 +124,11 @@ h1 {
 }
 
 #limparFiltroNivelBtn {
-    background-color: #ff8a65; /* Laranja avermelhado */
+    background-color: #d7d8d9; /* Cinza */
 }
 
 #limparFiltroNivelBtn:hover {
-    background-color: #ff7043;
+    background-color: #e6e7e8;
 }
 
 
