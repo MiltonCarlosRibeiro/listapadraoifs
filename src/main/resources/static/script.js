@@ -327,7 +327,7 @@ function criarLinha(v = {}) {
     row.appendChild(linhaCell);
 
     row.appendChild(inputCell("text", false, v.ITEM_COMPONENTE || "", true));
-    row.appendChild(inputCell("text", false, v.QTDE_MONTAGEM || ""));
+    row.appendChild(inputCell("text", false, v.QTDE_MONTAGEM || "", false, "qtde-montagem-col")); // Adiciona classe para QTDE_MONTAGEM
     // AQUI: Garantir que UNIDADE_MEDIDA use o valor corretamente
     row.appendChild(inputCell("text", false, (v.UNIDADE_MEDIDA || "").toLowerCase(), true, "unidade-medida-col"));
     row.appendChild(selectCell(fatorSucata, v.FATOR_SUCATA || "0"));
@@ -367,7 +367,7 @@ function atualizarSequencias() {
     const linhas = tabela.querySelectorAll("tr");
     linhas.forEach((row, index) => {
         const seqTd = row.querySelectorAll("td")[1]; // Índice 1 é a coluna SEQ
-        if (seqTd) seqTd.textContent = (index + 1) * 10;
+        if (seqTd) seqTd.textContent = (index + 1) * 1;
     });
 }
 
@@ -1056,6 +1056,121 @@ document.getElementById("inputFile").addEventListener("change", function (e) {
     carregarExcel(e.target);
     e.target.value = ''; // Limpa o input para que o mesmo arquivo possa ser selecionado novamente
 });
+
+
+// --- COLAGEM MASSA COM CONFIRMAÇÃO ---
+// Adiciona o listener de paste ao document para pegar colagens em qualquer lugar
+document.addEventListener('paste', handlePasteMultipleLines);
+
+/**
+ * Função para colar múltiplos valores em qualquer campo da tabela (com suporte para criar linhas e ignorar cabeçalho).
+ * Ativada por um evento 'paste' no documento.
+ * @param {ClipboardEvent} event - O evento de colagem.
+ */
+function handlePasteMultipleLines(event) {
+    const pastedText = (event.clipboardData || window.clipboardData).getData('text');
+    if (!pastedText) return;
+
+    // Divide o texto em linhas, ignora vazias e espaços
+    const lines = pastedText
+        .split(/\r?\n/)
+        .map(line => line.trim())
+        .filter(line => line !== '');
+
+    if (lines.length === 0) {
+        Swal.fire("⚠️ Nenhum dado válido", "Nenhum dado foi colado ou as linhas estão vazias.", "warning");
+        return;
+    }
+
+    // Lista de cabeçalhos para ignorar (adicione se precisar)
+    // Usamos um conjunto para pesquisa mais eficiente
+    const possibleHeaders = new Set([
+        'seq', 'codigo_material', 'codigo', 'qtd', 'qtde', 'un', 'unidade_de_medida', 'unidade_medida', 'unidade', 'descricao', 'item_componente', 'item', 'linha', 'nivel', 'site', 'alternativa', 'tipo_estrutura', 'fator_sucata'
+    ]);
+
+    // Remove acentos e caracteres especiais para comparar cabeçalho
+    const normalizeHeader = str => str.normalize('NFD').replace(/[\u0300-\u036f\s_]/g, "").toLowerCase();
+    const firstLineNormalized = normalizeHeader(lines[0]);
+
+    // Verifica se a primeira linha parece ser um cabeçalho
+    // Consideramos cabeçalho se a primeira palavra normalizada da linha corresponder a um de nossos cabeçalhos possíveis
+    const isHeader = Array.from(possibleHeaders).some(header => firstLineNormalized.startsWith(normalizeHeader(header)));
+
+    const startLineIndex = isHeader ? 1 : 0;
+    const realLines = lines.slice(startLineIndex);
+
+    if (realLines.length === 0) {
+        Swal.fire("⚠️ Nenhum dado colável", "Apenas cabeçalho foi colado ou não há dados para colar.", "warning");
+        return;
+    }
+
+    const activeElement = document.activeElement;
+    // Garante que a colagem só ocorra em inputs/selects dentro da tabela
+    if (
+        activeElement &&
+        (activeElement.tagName === 'INPUT' || activeElement.tagName === 'SELECT') &&
+        activeElement.closest('#listaTabela')
+    ) {
+        Swal.fire({
+            title: `Colar ${realLines.length} item(s)?`,
+            html: `Você está prestes a colar <strong>${realLines.length}</strong> valor(es) a partir da célula selecionada. <br>Novas linhas serão criadas se necessário.`,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'OK',
+            cancelButtonText: 'Cancelar'
+        }).then((result) => {
+            if (!result.isConfirmed) return;
+
+            const targetRow = activeElement.closest('tr');
+            const targetTd = activeElement.closest('td');
+            const rowIndex = Array.from(tabela.rows).indexOf(targetRow);
+            const columnIndex = Array.from(targetRow.children).indexOf(targetTd);
+
+            let itemsPastedCount = 0;
+
+            for (let i = 0; i < realLines.length; i++) {
+                let rowToUpdate = tabela.rows[rowIndex + i];
+
+                // Cria novas linhas se necessário
+                if (!rowToUpdate) {
+                    rowToUpdate = criarLinhaVazia();
+                    tabela.appendChild(rowToUpdate);
+                }
+
+                const inputToUpdate = rowToUpdate.children[columnIndex]?.querySelector('input, select');
+                if (inputToUpdate) {
+                    let valueToPaste = realLines[i]; // Mantém o valor original antes de normalizar
+
+                    // Lógica para normalização dos campos específicos
+                    if (inputToUpdate.closest('td').classList.contains('unidade-medida-col')) {
+                        valueToPaste = valueToPaste.toLowerCase();
+                    } else if (inputToUpdate.closest('td').classList.contains('nivel-col')) {
+                        valueToPaste = valueToPaste.trim(); // Nível pode ter espaços
+                    } else if (inputToUpdate.closest('td').classList.contains('qtde-montagem-col')) {
+                        valueToPaste = valueToPaste.replace(',', '.'); // Substitui vírgula por ponto para quantidades
+                    } else {
+                        // Para outros campos de texto, como Código Material e Item Componente
+                        valueToPaste = valueToPaste.toUpperCase();
+                    }
+
+                    inputToUpdate.value = valueToPaste;
+                    // Dispara o evento 'input' para que as outras lógicas (duplicatas, LINHA, indentação) sejam atualizadas
+                    // Isso é importante porque a alteração via JS não dispara 'input' automaticamente
+                    inputToUpdate.dispatchEvent(new Event('input', { bubbles: true }));
+                    itemsPastedCount++;
+                }
+            }
+            acaoImportouOuAdicionouLinhas(); // Força uma atualização completa após a colagem em massa
+            Swal.fire("✅ Colagem concluída!", `Foram colados ${itemsPastedCount} item(s) com sucesso.`, "success");
+        });
+        event.preventDefault(); // Previne a ação de colagem padrão do navegador
+    } else {
+        // Se o elemento ativo não é um campo da tabela, permite a colagem padrão do navegador
+        // para não bloquear colagens em outros lugares (e.g., barra de pesquisa)
+        console.log("Colagem em elemento não gerenciado pela tabela, permitindo padrão.");
+    }
+}
+
 
 // --- Inicialização da Aplicação ---
 
