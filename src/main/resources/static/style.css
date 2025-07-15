@@ -15,6 +15,7 @@ header {
     display: flex;
     align-items: center;
     margin-bottom: 20px;
+    position: relative; /* Para posicionar o contador de duplicatas */
 }
 
 .logo {
@@ -24,6 +25,22 @@ header {
 
 h1 {
     font-size: 30px;
+}
+
+/* Material Symbols Adjustments */
+h1 .material-symbols-outlined {
+    font-size: 30px; /* Match h1 font size */
+    vertical-align: middle;
+}
+
+.button-bar button .material-symbols-outlined,
+.file-label .material-symbols-outlined,
+.painting-controls h3 .material-symbols-outlined,
+.painting-controls .paint-btn .material-symbols-outlined,
+.filter-controls h3 .material-symbols-outlined {
+    font-size: 20px; /* Default icon size for buttons/labels */
+    vertical-align: middle;
+    margin-right: 5px; /* Space between icon and text */
 }
 
 .button-bar {
@@ -49,6 +66,30 @@ h1 {
 .file-label:hover {
     background-color: #7d7c7c;
 }
+
+/* Botões de Busca de Duplicatas */
+.find-duplicates-btn { /* Removido .next-duplicate-btn daqui */
+    background-color: #4CAF50; /* Verde */
+}
+.find-duplicates-btn:hover { /* Removido .next-duplicate-btn daqui */
+    background-color: #45a049; /* Verde mais escuro */
+}
+
+/* Contador de Duplicatas */
+.duplicate-count-display {
+    position: absolute;
+    top: 50%;
+    right: 0;
+    transform: translateY(-50%);
+    background-color: #f44336; /* Vermelho */
+    color: white;
+    padding: 5px 10px;
+    border-radius: 5px;
+    font-weight: bold;
+    font-size: 14px;
+    margin-left: 20px; /* Espaço do H1 */
+}
+
 
 /* Controles de Pintura */
 .painting-controls {
@@ -236,7 +277,7 @@ th:nth-child(11), td:nth-child(11) { width: 100px; } /* UNIDADE DE MEDIDA */
 th:nth-child(12), td:nth-child(12) { width: 100px; } /* FATOR_SUCATA */
 
 
-/* Regras para indentação baseadas no nível (Cores atualizadas para bater com script.js) */
+/* Regras para indentação baseadas no nível */
 .nivel-1 { background-color: #4664cf !important; }
 .nivel-2 { background-color: #CD5C5C !important; }
 .nivel-3 { background-color: #B3E6B3 !important; }
@@ -325,19 +366,19 @@ th:nth-child(12), td:nth-child(12) { width: 100px; } /* FATOR_SUCATA */
 
 /* --- CLASSES PARA OPACIDADE E DESTAQUE --- */
 
-/* Aplica opacidade ao tbody da tabela */
-#listaTabela tbody.table-faded tr:not(.highlight-focused-item) {
-    opacity: 0.2; /* Opacidade para as linhas NÃO focadas */
+/* Aplica opacidade ao tbody da tabela para escurecer as linhas não focadas */
+#listaTabela tbody.table-faded tr {
+    opacity: 0.2; /* Opacidade para TODAS as linhas */
     transition: opacity 0.3s ease-in-out;
 }
 
 /* Garante que a linha focada tenha opacidade total, mesmo que o tbody esteja com fade */
 #listaTabela tbody tr.highlight-focused-item {
-    opacity: 1 !important;
+    opacity: 1 !important; /* MUITO IMPORTANTE: Garante opacidade total */
     transition: opacity 0.3s ease-in-out;
-    box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
-    position: relative;
-    z-index: 20;
+    box-shadow: 0 0 15px rgba(0, 0, 0, 0.5); /* Sombra para destacar ainda mais */
+    position: relative; /* Para garantir que a sombra seja renderizada corretamente */
+    z-index: 20; /* Para que a linha fique acima de outras com opacidade */
 }
 
 /* Efeito de piscar para a linha encontrada (combina com o roxo claro) */

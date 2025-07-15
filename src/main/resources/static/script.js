@@ -98,7 +98,26 @@ const siteValores = ["1", ""];
  */
 const niveis = Array.from({ length: 10 }, (_, i) => (i + 1).toString());
 
-// --- NOVAS FUNÇÕES PARA DUPLICATAS ---
+// --- Variáveis de estado para a navegação de duplicatas ---
+let foundDuplicates = []; // Armazena as TRs que são duplicatas
+let currentDuplicateIndex = -1; // Índice da duplicata atualmente focada
+
+/**
+ * Reseta o estado da busca de duplicatas e remove destaques de foco.
+ */
+function resetDuplicateSearchState() {
+    foundDuplicates = [];
+    currentDuplicateIndex = -1;
+    // Remove as classes de opacidade e destaque de todas as linhas e do tbody
+    const tbodyElement = document.getElementById("listaTabela").querySelector('tbody');
+    tbodyElement.classList.remove("table-faded");
+    tabela.querySelectorAll('tr.highlight-focused-item').forEach(row => {
+        row.classList.remove('highlight-focused-item');
+        row.classList.remove('temp-highlight-found');
+    });
+    // Força uma nova verificação de duplicatas para re-aplicar o roxo claro em todos os itens que ainda são duplicatas
+    verificarDuplicatas();
+}
 
 /**
  * Procura por uma linha existente na tabela com o mesmo CODIGO_MATERIAL e ITEM_COMPONENTE.
@@ -148,7 +167,7 @@ async function mostrarAlertaDuplicata(newData, existingRow) {
         icon: 'warning',
         showCancelButton: true, // Corresponde ao botão "Cancel"
         confirmButtonText: 'Ignorar e Inserir', // Este é agora o botão 'confirm'
-        showDenyButton: false, // Desabilitar o botão "Não Adicionar"
+        showDenyButton: false, // Desabilita o botão "Não Adicionar"
         allowOutsideClick: false,
         allowEscapeKey: false,
         reverseButtons: true // Mantém a ordem dos botões como no layout anterior
@@ -201,7 +220,7 @@ function inputCell(type, readOnly = false, value = "", isPasteTarget = false, cl
         // Dispara o alerta de duplicata se CODIGO_MATERIAL e ITEM_COMPONENTE estiverem preenchidos
         // E SE a mudança ocorreu em CODIGO_MATERIAL ou ITEM_COMPONENTE
         if (currentData.CODIGO_MATERIAL && currentData.ITEM_COMPONENTE &&
-            (isCodigoMaterialCol || isItemComponenteCol)) { // Removida a condição currentData.QTDE_MONTAGEM
+            (isCodigoMaterialCol || isItemComponenteCol)) {
 
             const existingDuplicateRow = encontrarLinhaDuplicada(
                 currentData.CODIGO_MATERIAL,
@@ -213,14 +232,7 @@ function inputCell(type, readOnly = false, value = "", isPasteTarget = false, cl
                 const action = await mostrarAlertaDuplicata(currentData, existingDuplicateRow);
 
                 // --- Remova quaisquer efeitos de opacidade/destaque temporário após a escolha do SweetAlert ---
-                const tbodyElement = document.getElementById("listaTabela").querySelector('tbody');
-
-                // Limpa todos os destaques relacionados ao foco
-                tbodyElement.classList.remove("table-faded");
-                tabela.querySelectorAll('tr.highlight-focused-item').forEach(row => {
-                    row.classList.remove('highlight-focused-item');
-                    row.classList.remove('temp-highlight-found');
-                });
+                resetDuplicateSearchState(); // Chama a função para limpar o estado de busca e destaques.
 
                 if (action === 'ignorar') {
                     currentRow.classList.remove("no-highlight-on-ignore");
@@ -256,13 +268,7 @@ function inputCell(type, readOnly = false, value = "", isPasteTarget = false, cl
 
         // Verifica se o tbody está com o fade ativo OU se a linha clicada é uma linha focada/temporariamente destacada
         if (tbodyElement.classList.contains("table-faded") || clickedRow.classList.contains('highlight-focused-item')) {
-            // Remove os efeitos de opacidade e o destaque temporário de TODAS as linhas e do tbody
-            tbodyElement.classList.remove("table-faded");
-
-            tabela.querySelectorAll('tr.highlight-focused-item').forEach(row => {
-                row.classList.remove('highlight-focused-item');
-                row.classList.remove('temp-highlight-found');
-            });
+            resetDuplicateSearchState(); // Limpa o estado de busca e destaques ao clicar.
         }
     });
 
@@ -644,6 +650,7 @@ function preencherLinha(row, data) {
 
 /**
  * Verifica e destaca linhas que contêm dados duplicados na tabela.
+ * Atualiza o contador de duplicatas no header.
  * Ignora linhas completamente vazias e o destaque pode ser desativado via checkbox.
  * ATUALIZADO: Agora considera duplicata APENAS se CODIGO_MATERIAL e ITEM_COMPONENTE forem idênticos.
  * A linha que teve a duplicata IGNORADA no splash não será destacada.
@@ -657,9 +664,14 @@ function verificarDuplicatas() {
         row.classList.remove("no-highlight-on-ignore");
     });
 
-    if (ignorarDuplicatas) return;
+    if (ignorarDuplicatas) {
+        document.getElementById("duplicateCountDisplay").textContent = ""; // Limpa o contador se ignorar
+        resetDuplicateSearchState(); // Garante que o modo de busca seja desativado
+        return;
+    }
 
     const combinaçõesDetectadas = new Map();
+    const tempFoundDuplicates = []; // Usa um array temporário para construir a lista
 
     linhas.forEach((tr) => {
         const data = getLinhaData(tr);
@@ -675,15 +687,31 @@ function verificarDuplicatas() {
         combinaçõesDetectadas.get(hash).push(tr);
     });
 
+    let duplicateCount = 0;
     for (const [hash, rows] of combinaçõesDetectadas) {
-        if (rows.length > 1) {
+        if (rows.length > 1) { // Se há mais de uma linha com essa combinação, são duplicatas
             rows.forEach(row => {
                 if (!row.classList.contains("no-highlight-on-ignore")) {
                     row.classList.add("highlight-duplicate");
                 }
             });
+            // Adiciona todas as linhas duplicadas ao array temporário
+            tempFoundDuplicates.push(...rows);
+            duplicateCount += rows.length; // Conta cada ocorrência duplicada
         }
     }
+    // Garante que foundDuplicates contenha apenas as duplicatas ativas (roxo claro)
+    foundDuplicates = tempFoundDuplicates.filter(row => row.classList.contains("highlight-duplicate"));
+    foundDuplicates.sort((a, b) => Array.from(tabela.rows).indexOf(a) - Array.from(tabela.rows).indexOf(b)); // Ordena por posição na tabela
+
+    const displayElement = document.getElementById("duplicateCountDisplay");
+    if (foundDuplicates.length > 0) { // Se o length for 0, não há itens duplicados para buscar
+        displayElement.textContent = `⚠️ ${foundDuplicates.length} duplicata(s)`;
+    } else {
+        displayElement.textContent = "";
+    }
+
+    currentDuplicateIndex = -1; // Reseta o índice ao re-verificar duplicatas
 }
 
 /**
@@ -939,8 +967,8 @@ document.getElementById("deletarSelecionadosBtn").addEventListener("click", () =
         cancelButtonText: 'Cancelar'
     }).then((result) => {
         if (result.isConfirmed) {
-            linhasParaDeletar.forEach(row => row.remove());
-            acaoImportouOuAdicionouLinhas();
+            linhasParaDeletar.forEach(row => row.remove()); // Remove as linhas
+            acaoImportouOuAdicionouLinhas(); // Atualiza SEQ, LINHA, e Duplicatas
             Swal.fire('Deletado!', `${linhasParaDeletar.length} linha(s) foram deletadas.`, 'success');
         }
     });
@@ -991,7 +1019,7 @@ document.getElementById("inserirAbaixoBtn").addEventListener("click", () => {
 document.getElementById("toggleSeqBtn").addEventListener("click", () => {
     seqAtivo = !seqAtivo;
     document.getElementById("listaTabela").classList.toggle("seq-col-hidden", !seqAtivo);
-    document.getElementById("toggleSeqBtn").textContent = seqAtivo ? "👁️ SEQ" : "✖️ SEQ";
+    document.getElementById("toggleSeqBtn").innerHTML = seqAtivo ? '<span class="material-symbols-outlined">visibility</span> SEQ' : '<span class="material-symbols-outlined">visibility_off</span> SEQ';
 });
 
 /**
@@ -1001,7 +1029,7 @@ document.getElementById("toggleSeqBtn").addEventListener("click", () => {
 document.getElementById("toggleNivelColBtn").addEventListener("click", () => {
     nivelColVisivel = !nivelColVisivel;
     document.getElementById("listaTabela").classList.toggle("nivel-col-hidden", !nivelColVisivel);
-    document.getElementById("toggleNivelColBtn").textContent = nivelColVisivel ? "👁️ NÍVEL" : "✖️ NÍVEL";
+    document.getElementById("toggleNivelColBtn").innerHTML = nivelColVisivel ? '<span class="material-symbols-outlined">layers</span> NÍVEL' : '<span class="material-symbols-outlined">layers_clear</span> NÍVEL';
 });
 
 /**
@@ -1013,7 +1041,7 @@ document.getElementById("toggleHoverEffectBtn").addEventListener("click", () => 
     const tableElement = document.getElementById("listaTabela");
     tableElement.classList.toggle("hover-effect", hoverEffectAtivo);
     tableElement.classList.toggle("no-hover-effect", !hoverEffectAtivo);
-    document.getElementById("toggleHoverEffectBtn").textContent = hoverEffectAtivo ? "📏 Régua" : "✖️ Régua";
+    document.getElementById("toggleHoverEffectBtn").innerHTML = hoverEffectAtivo ? '<span class="material-symbols-outlined">straighten</span> Régua' : '<span class="material-symbols-outlined">format_line_spacing</span> Régua';
 });
 
 // --- Event Listeners para Controles de Pintura e Destaque ---
@@ -1151,6 +1179,78 @@ document.getElementById("inputFile").addEventListener("change", function (e) {
 });
 
 
+// --- Lógica de Busca e Navegação de Duplicatas por Botão e Teclado ---
+
+document.getElementById("findDuplicatesBtn").addEventListener("click", () => {
+    resetDuplicateSearchState(); // Limpa qualquer estado anterior
+
+    // Filtra apenas as linhas que SÃO destacadas como duplicatas (as roxas)
+    const currentDuplicates = Array.from(tabela.querySelectorAll('tr.highlight-duplicate'));
+
+    if (currentDuplicates.length === 0) {
+        Swal.fire("ℹ️ Sem Duplicatas", "Não há itens duplicados para buscar na lista.", "info");
+        return;
+    }
+
+    // Ordena as duplicatas pela posição na tabela para garantir a ordem de navegação
+    foundDuplicates = currentDuplicates.sort((a, b) => {
+        return Array.from(tabela.rows).indexOf(a) - Array.from(tabela.rows).indexOf(b);
+    });
+
+    currentDuplicateIndex = 0; // Começa pelo primeiro item duplicado
+
+    // Rola para o primeiro item e aplica os destaques
+    focusOnDuplicate(foundDuplicates[currentDuplicateIndex]);
+});
+
+/**
+ * Aplica os efeitos visuais de foco a uma linha duplicada.
+ * @param {HTMLTableRowElement} rowToFocus - A linha duplicada a ser focada.
+ */
+function focusOnDuplicate(rowToFocus) {
+    if (!rowToFocus) return; // Sai se a linha não existir
+
+    const tbodyElement = document.getElementById("listaTabela").querySelector('tbody');
+
+    // Remove o destaque de foco de TODAS as linhas antes de aplicar no novo item
+    tabela.querySelectorAll('tr').forEach(row => {
+        row.classList.remove('highlight-focused-item');
+        row.classList.remove('temp-highlight-found');
+    });
+
+    // Aplica o fade ao tbody para escurecer as outras linhas
+    tbodyElement.classList.add("table-faded");
+
+    // Aplica destaque na linha focada
+    rowToFocus.classList.add('highlight-focused-item');
+    rowToFocus.classList.add('highlight-duplicate'); // Garante que continue roxa
+    rowToFocus.classList.add('temp-highlight-found'); // Efeito de piscar
+
+    rowToFocus.scrollIntoView({ behavior: 'smooth', block: 'center' }); // Rola suavemente
+}
+
+// --- Listener GLOBAL para Teclas ENTER e ESC (para navegação de duplicatas) ---
+document.addEventListener('keydown', (e) => {
+    const tbodyElement = document.getElementById("listaTabela").querySelector('tbody');
+
+    // Só ativa a navegação por teclado se houver duplicatas encontradas e a tabela estiver em modo "faded"
+    if (foundDuplicates.length > 0 && tbodyElement.classList.contains("table-faded")) {
+        if (e.key === 'Enter') {
+            e.preventDefault(); // Evita o comportamento padrão do Enter (como focar no próximo input)
+            currentDuplicateIndex++;
+            if (currentDuplicateIndex >= foundDuplicates.length) {
+                currentDuplicateIndex = 0; // Volta para o início da lista se chegar ao final
+            }
+            focusOnDuplicate(foundDuplicates[currentDuplicateIndex]);
+        } else if (e.key === 'Escape') {
+            e.preventDefault(); // Evita o comportamento padrão do Esc
+            resetDuplicateSearchState(); // Sai do modo de busca de duplicatas
+            Swal.fire("✅ Busca Encerrada", "O modo de busca de duplicatas foi desativado.", "info");
+        }
+    }
+});
+
+
 // --- COLAGEM MASSA COM CONFIRMAÇÃO ---
 // Adiciona o listener de paste ao document para pegar colagens em qualquer lugar
 document.addEventListener('paste', handlePasteMultipleLines);
@@ -1158,7 +1258,6 @@ document.addEventListener('paste', handlePasteMultipleLines);
 /**
  * Função para colar múltiplos valores em qualquer campo da tabela (com suporte para criar linhas e ignorar cabeçalho).
  * Ativada por um evento 'paste' no documento.
- * ATUALIZADO: Lógica de detecção de duplicatas com splash para CODIGO_MATERIAL e ITEM_COMPONENTE.
  * @param {ClipboardEvent} event - O evento de colagem.
  */
 async function handlePasteMultipleLines(event) {
@@ -1270,7 +1369,7 @@ async function handlePasteMultipleLines(event) {
 
 
             // Dispara o alerta de duplicata se CODIGO_MATERIAL e ITEM_COMPONENTE estiverem preenchidos
-            if (currentMaterial && currentItemComponente) { // Removida a condição currentQtdeMontagem
+            if (currentMaterial && currentItemComponente) {
                 const existingDuplicateRow = encontrarLinhaDuplicada(
                     currentMaterial,
                     currentItemComponente,
@@ -1285,13 +1384,8 @@ async function handlePasteMultipleLines(event) {
                     };
                     const action = await mostrarAlertaDuplicata(tempNewData, existingDuplicateRow);
 
-                    // Reverte a opacidade da tabela e da linha focada após qualquer ação no SweetAlert
-                    const tbodyElement = document.getElementById("listaTabela").querySelector('tbody');
-                    tbodyElement.classList.remove("table-faded");
-                    tabela.querySelectorAll('tr.highlight-focused-item').forEach(row => {
-                        row.classList.remove('highlight-focused-item');
-                        row.classList.remove('temp-highlight-found');
-                    });
+                    // --- Remova quaisquer efeitos de opacidade/destaque temporário após a escolha do SweetAlert ---
+                    resetDuplicateSearchState(); // Limpa o estado de busca e destaques.
 
                     if (action === 'ignorar') {
                         inputToUpdate.dispatchEvent(new Event('input', { bubbles: true }));
@@ -1303,7 +1397,7 @@ async function handlePasteMultipleLines(event) {
                         if (otherMaterialInput && otherMaterialInput !== inputToUpdate) otherMaterialInput.value = "";
                         if (otherItemInput && otherItemInput !== inputToUpdate) otherItemInput.value = "";
                         const qtdeInput = rowToProcess.querySelector(".qtde-montagem-col input");
-                        if (qtdeInput) qtdeInput.value = ""; // Limpa quantidade também
+                        if (qtdeInput) qtdeInput.value = "";
 
                         if (isNewlyCreatedRow) {
                              rowToProcess.remove();
@@ -1353,7 +1447,8 @@ document.addEventListener("DOMContentLoaded", () => {
     if (hoverEffectAtivo) tabelaElement.classList.add("hover-effect");
     else tabelaElement.classList.add("no-hover-effect");
 
-    document.getElementById("toggleSeqBtn").textContent = seqAtivo ? "👁️ SEQ" : "✖️ SEQ";
-    document.getElementById("toggleNivelColBtn").textContent = nivelColVisivel ? "👁️ NÍVEL" : "✖️ NÍVEL";
-    document.getElementById("toggleHoverEffectBtn").textContent = hoverEffectAtivo ? "📏 Régua" : "✖️ Régua";
+    // Inicializa o texto dos botões de alternância de visibilidade com ícones Material Symbols
+    document.getElementById("toggleSeqBtn").innerHTML = '<span class="material-symbols-outlined">visibility</span> SEQ';
+    document.getElementById("toggleNivelColBtn").innerHTML = '<span class="material-symbols-outlined">layers</span> NÍVEL';
+    document.getElementById("toggleHoverEffectBtn").innerHTML = '<span class="material-symbols-outlined">straighten</span> Régua';
 });
