@@ -291,7 +291,7 @@ th:nth-child(12), td:nth-child(12) { width: 100px; } /* FATOR_SUCATA */
 
 /* Classe para o destaque de duplicatas (roxo claro) */
 .highlight-duplicate {
-    background-color: #f0e6ff !important; /* Lavender Blush - roxo claro */
+    background-color: #ff0000 !important; /* Lavender Blush - roxo claro #f0e6ff antigo, troquei para vermelho*/
 }
 
 /* Para ocultar a coluna SEQ (controlado por JS) */
@@ -387,7 +387,7 @@ th:nth-child(12), td:nth-child(12) { width: 100px; } /* FATOR_SUCATA */
 }
 
 @keyframes flash-found {
-    0% { background-color: #f0e6ff; } /* Cor original da duplicata (roxo claro) */
+    0% { background-color: #f0e6ff; } /* Cor original da duplicata (roxo claro ) */
     50% { background-color: #99FFFF; } /* Um azul claro/ciano para o "flash" */
     100% { background-color: #f0e6ff; } /* Retorna ao roxo claro */
 }
