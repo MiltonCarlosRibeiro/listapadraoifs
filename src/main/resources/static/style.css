@@ -1,6 +1,5 @@
 body {
     font-family: Arial, sans-serif;
-    /*background-color: #f5f5f5;*/
     background-color: #ededed;
     margin: 0;
     padding: 20px;
@@ -8,7 +7,7 @@ body {
 }
 
 .container {
-    max-width: 1900px; /* Mantém o valor original */
+    max-width: 1900px;
     margin: auto;
 }
 
@@ -48,14 +47,14 @@ h1 {
 
 .button-bar button:hover,
 .file-label:hover {
-    background-color: #7d7c7c; /*Cinza claro*/
+    background-color: #7d7c7c;
 }
 
 /* Controles de Pintura */
 .painting-controls {
     margin-top: 15px;
     padding: 15px;
-    background-color: #fffcfd; /* Branco*/
+    background-color: #fffcfd;
     border-radius: 8px;
     display: flex;
     flex-wrap: wrap;
@@ -68,7 +67,7 @@ h1 {
     width: 100%;
     margin-top: 0;
     margin-bottom: 10px;
-    color: #121212; /* Preto */
+    color: #121212;
 }
 
 #nivelColorButtons,
@@ -82,19 +81,19 @@ h1 {
     padding: 8px 12px;
     border-radius: 4px;
     font-weight: bold;
-    color: black; /* Padrão, pode ser sobrescrito pelo JS para contraste */
+    color: black;
 }
 
-/* Cores de Atenção - Mantidas vivas para contraste */
-.attention-yellow { background-color: #FFBF00; color: black; } /* Âmbar */
-.attention-green { background-color: #28A745; color: white; } /* Verde Vívido */
-.attention-red { background-color: #DC3545; color: white; } /* Vermelho Brilhante */
+/* Cores de Atenção */
+.attention-yellow { background-color: #FFBF00; color: black; }
+.attention-green { background-color: #28A745; color: white; }
+.attention-red { background-color: #DC3545; color: white; }
 
 /* Controles de Filtro */
 .filter-controls {
     margin-top: 20px;
     padding: 15px;
-    background-color: #fcfcfc; /* Branco */
+    background-color: #fcfcfc;
     border-radius: 8px;
     display: flex;
     flex-wrap: wrap;
@@ -107,7 +106,7 @@ h1 {
     width: 100%;
     margin-top: 0;
     margin-bottom: 10px;
-    color: #000000; /* Preto */
+    color: #000000;
 }
 
 #checkboxNiveis {
@@ -124,13 +123,12 @@ h1 {
 }
 
 #limparFiltroNivelBtn {
-    background-color: #d7d8d9; /* Cinza */
+    background-color: #d7d8d9;
 }
 
 #limparFiltroNivelBtn:hover {
     background-color: #e6e7e8;
 }
-
 
 .table-container {
     overflow-x: auto;
@@ -144,7 +142,7 @@ table {
     width: 100%;
     border-collapse: collapse;
     white-space: nowrap;
-    table-layout: fixed; /* Garante que as larguras de coluna funcionem */
+    table-layout: fixed;
 }
 
 th, td {
@@ -199,7 +197,7 @@ input[type=number] {
 
 /* Coluna de checkbox (1ª coluna) */
 th:nth-child(1), td:nth-child(1) {
-    width: 30px; /* Checkbox */
+    width: 30px;
     text-align: center;
     padding: 8px 5px;
 }
@@ -217,74 +215,42 @@ td.seq-col {
     color: #555;
 }
 
-/* Coluna NÍVEL (3ª coluna) - Agora com a classe nivel-col no HTML */
+/* Coluna NÍVEL (3ª coluna) */
 th.nivel-col, td.nivel-col {
     width: 80px;
     text-align: center;
     background-color: #f2f2f2;
 }
 
+/* --- AJUSTES DAS LARGURAS SOLICITADAS --- */
+th:nth-child(4), td:nth-child(4) { width: 50px; } /* SITE */
+th:nth-child(6), td:nth-child(6) { width: 350px; } /* CÓDIGO_MATERIAL */
+th:nth-child(8), td:nth-child(8) { width: 60px; } /* LINHA */
+th:nth-child(10), td:nth-child(10) { width: 140px; } /* QTDE_MONTAGEM */
 
-/* --- AJUSTES DAS LARGURAS SOLICITADAS (Com base no index.html corrigido) --- */
-
-/* Coluna SITE (4ª coluna) */
-th:nth-child(4), td:nth-child(4) {
-    width: 50px; /* Aproximadamente 4 caracteres */
-}
-
-/* Coluna CÓDIGO_MATERIAL (6ª coluna) */
-th:nth-child(6), td:nth-child(6) {
-    width: 350px; /* Aproximadamente 50 caracteres */
-}
-
-/* Coluna LINHA (8ª coluna) */
-th:nth-child(8), td:nth-child(8) {
-    width: 60px; /* Aproximadamente 5 caracteres */
-}
-
-/* Coluna QTDE_MONTAGEM (10ª coluna) */
-th:nth-child(10), td:nth-child(10) {
-    width: 140px; /* Aproximadamente 20 caracteres */
-}
-
-/* --- FIM DOS AJUSTES SOLICITADOS --- */
-
-/* Larguras para outras colunas para distribuir o espaço, baseadas na nova ordem */
-th:nth-child(5), td:nth-child(5) { /* ALTERNATIVA (5ª coluna) */
-    width: 90px;
-}
-th:nth-child(7), td:nth-child(7) { /* TIPO ESTRUTURA (7ª coluna) */
-    width: 120px;
-}
-th:nth-child(9), td:nth-child(9) { /* ITEM_COMPONENTE (9ª coluna) */
-    width: 180px;
-}
-th:nth-child(11), td:nth-child(11) { /* UNIDADE DE MEDIDA (11ª coluna) */
-    width: 100px;
-}
-th:nth-child(12), td:nth-child(12) { /* FATOR_SUCATA (12ª coluna) */
-    width: 100px;
-}
+/* Larguras para outras colunas para distribuir o espaço */
+th:nth-child(5), td:nth-child(5) { width: 90px; } /* ALTERNATIVA */
+th:nth-child(7), td:nth-child(7) { width: 120px; } /* TIPO ESTRUTURA */
+th:nth-child(9), td:nth-child(9) { width: 180px; } /* ITEM_COMPONENTE */
+th:nth-child(11), td:nth-child(11) { width: 100px; } /* UNIDADE DE MEDIDA */
+th:nth-child(12), td:nth-child(12) { width: 100px; } /* FATOR_SUCATA */
 
 
-/* Regras para indentação baseadas no nível (Cores padrão) */
 /* Regras para indentação baseadas no nível (Cores atualizadas para bater com script.js) */
-.nivel-1 { background-color: #4664cf !important; } /* Azul anil */
-.nivel-2 { background-color: #CD5C5C !important; } /* Vermelho Indiano */
-.nivel-3 { background-color: #B3E6B3 !important; } /* Verde Pastel */
-.nivel-4 { background-color: #FFD700 !important; } /* Ouro */
-.nivel-5 { background-color: #8A2BE2 !important; } /* Azul Violeta */
-.nivel-6 { background-color: #FF8C00 !important; } /* Laranja Escuro */
-.nivel-7 { background-color: #00CED1 !important; } /* Turquesa Escuro */
-.nivel-8 { background-color: #FF69B4 !important; } /* Rosa Choque */
-.nivel-9 { background-color: #9ACD32 !important; } /* Verde Amarelado */
-.nivel-10 { background-color: #DA70D6 !important; } /* Orquídea */
-/* Adicione mais níveis se necessário, seguindo o padrão */
+.nivel-1 { background-color: #4664cf !important; }
+.nivel-2 { background-color: #CD5C5C !important; }
+.nivel-3 { background-color: #B3E6B3 !important; }
+.nivel-4 { background-color: #FFD700 !important; }
+.nivel-5 { background-color: #8A2BE2 !important; }
+.nivel-6 { background-color: #FF8C00 !important; }
+.nivel-7 { background-color: #00CED1 !important; }
+.nivel-8 { background-color: #FF69B4 !important; }
+.nivel-9 { background-color: #9ACD32 !important; }
+.nivel-10 { background-color: #DA70D6 !important; }
 
 /* Classe para o destaque de duplicatas (roxo claro) */
-/* ALTERAÇÃO: Adicionado !important para que esta cor sobreponha as cores de nível */
 .highlight-duplicate {
-    background-color: #f0e6ff !important; /* Lavender Blush */
+    background-color: #f0e6ff !important; /* Lavender Blush - roxo claro */
 }
 
 /* Para ocultar a coluna SEQ (controlado por JS) */
@@ -301,8 +267,8 @@ th:nth-child(12), td:nth-child(12) { /* FATOR_SUCATA (12ª coluna) */
 
 /* Régua ao passar mouse */
 .hover-effect tbody tr:hover {
-    background-color: #ffe0b2 !important; /* Amarelo claro, substituído via JS */
-    outline: 1px solid #ffcc80; /* Contorno amarelo */
+    background-color: #ffe0b2 !important;
+    outline: 1px solid #ffcc80;
 }
 
 /* Para desativar a régua (remover o hover) */
@@ -317,26 +283,15 @@ th:nth-child(12), td:nth-child(12) { /* FATOR_SUCATA (12ª coluna) */
         overflow-x: auto;
     }
 
-    /* Reduzir padding para telas menores */
     th, td {
         padding: 6px 8px;
     }
 
-    /* Ajustes específicos para telas pequenas */
-    th:nth-child(4), td:nth-child(4) { /* SITE */
-        width: 40px;
-    }
-    th:nth-child(6), td:nth-child(6) { /* CÓDIGO_MATERIAL */
-        width: 200px;
-    }
-    th:nth-child(8), td:nth-child(8) { /* LINHA */
-        width: 50px;
-    }
-    th:nth-child(10), td:nth-child(10) { /* QTDE_MONTAGEM */
-        width: 100px;
-    }
+    th:nth-child(4), td:nth-child(4) { width: 40px; }
+    th:nth-child(6), td:nth-child(6) { width: 200px; }
+    th:nth-child(8), td:nth-child(8) { width: 50px; }
+    th:nth-child(10), td:nth-child(10) { width: 100px; }
 
-    /* Reduzir largura das colunas SEQ e NÍVEL em telas menores */
     th.seq-col, td.seq-col { width: 50px; }
     th.nivel-col, td.nivel-col { width: 70px; }
 }
@@ -367,3 +322,37 @@ th:nth-child(12), td:nth-child(12) { /* FATOR_SUCATA (12ª coluna) */
 .filter-controls label {
     margin-right: 5px;
 }
+
+/* --- CLASSES PARA OPACIDADE E DESTAQUE --- */
+
+/* Aplica opacidade ao tbody da tabela */
+#listaTabela tbody.table-faded tr:not(.highlight-focused-item) {
+    opacity: 0.2; /* Opacidade para as linhas NÃO focadas */
+    transition: opacity 0.3s ease-in-out;
+}
+
+/* Garante que a linha focada tenha opacidade total, mesmo que o tbody esteja com fade */
+#listaTabela tbody tr.highlight-focused-item {
+    opacity: 1 !important;
+    transition: opacity 0.3s ease-in-out;
+    box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
+    position: relative;
+    z-index: 20;
+}
+
+/* Efeito de piscar para a linha encontrada (combina com o roxo claro) */
+.temp-highlight-found {
+    animation: flash-found 1s 3;
+}
+
+@keyframes flash-found {
+    0% { background-color: #f0e6ff; } /* Cor original da duplicata (roxo claro) */
+    50% { background-color: #99FFFF; } /* Um azul claro/ciano para o "flash" */
+    100% { background-color: #f0e6ff; } /* Retorna ao roxo claro */
+}
+
+/* Para linhas que o usuário optou por IGNORAR no splash, elas não terão o destaque roxo */
+.no-highlight-on-ignore {
+    background-color: transparent !important;
+}
+/* Fim das classes */

@@ -98,6 +98,73 @@ const siteValores = ["1", ""];
  */
 const niveis = Array.from({ length: 10 }, (_, i) => (i + 1).toString());
 
+// --- NOVAS FUNÇÕES PARA DUPLICATAS ---
+
+/**
+ * Procura por uma linha existente na tabela com o mesmo CODIGO_MATERIAL e ITEM_COMPONENTE.
+ * Ignora a própria linha se for passada para edição.
+ * @param {string} codigoMaterial - O CODIGO_MATERIAL a ser procurado.
+ * @param {string} itemComponente - O ITEM_COMPONENTE a ser procurado.
+ * @param {HTMLTableRowElement} [currentRow=null] - A linha atual que está sendo editada (para ignorar na busca).
+ * @returns {HTMLTableRowElement|null} A primeira linha duplicada encontrada, ou null se nenhuma for encontrada.
+ */
+function encontrarLinhaDuplicada(codigoMaterial, itemComponente, currentRow = null) {
+    if (!codigoMaterial || !itemComponente) return null;
+
+    const linhas = Array.from(tabela.rows);
+    for (const row of linhas) {
+        if (currentRow && row === currentRow) continue;
+
+        const data = getLinhaData(row);
+        if (data.CODIGO_MATERIAL.toUpperCase() === codigoMaterial.toUpperCase() &&
+            data.ITEM_COMPONENTE.toUpperCase() === itemComponente.toUpperCase()) {
+            return row;
+        }
+    }
+    return null;
+}
+
+/**
+ * Exibe um SweetAlert2 com opções para lidar com uma duplicata encontrada.
+ * @param {Object} newData - Os dados da nova linha ou linha que está sendo colada/digitada.
+ * @param {HTMLTableRowElement} existingRow - A linha existente que é uma duplicata.
+ * @returns {Promise<string>} Uma promessa que resolve com a ação escolhida pelo usuário ('ignorar', 'cancelar').
+ */
+async function mostrarAlertaDuplicata(newData, existingRow) {
+    const existingData = getLinhaData(existingRow);
+    const qtdeNova = parseFloat(String(newData.QTDE_MONTAGEM).replace(',', '.')) || 0;
+    const qtdeExistente = parseFloat(String(existingData.QTDE_MONTAGEM).replace(',', '.')) || 0;
+
+    const qtdeNovaFormatada = qtdeNova.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+    const qtdeExistenteFormatada = qtdeExistente.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+
+    const result = await Swal.fire({
+        title: '⚠️ Duplicata Encontrada!',
+        html: `
+            <p>A combinação de <strong>Código Material: ${newData.CODIGO_MATERIAL}</strong> e <strong>Item Componente: ${newData.ITEM_COMPONENTE}</strong> já existe na linha <strong>${Array.from(tabela.rows).indexOf(existingRow) + 1}</strong>.</p>
+            <p><strong>Quantidade atual na linha existente:</strong> ${qtdeExistenteFormatada}<br>
+            <strong>Quantidade na linha a ser inserida:</strong> ${qtdeNovaFormatada}</p>
+        `,
+        icon: 'warning',
+        showCancelButton: true, // Corresponde ao botão "Cancel"
+        confirmButtonText: 'Ignorar e Inserir', // Este é agora o botão 'confirm'
+        showDenyButton: false, // Desabilitar o botão "Não Adicionar"
+        allowOutsideClick: false,
+        allowEscapeKey: false,
+        reverseButtons: true // Mantém a ordem dos botões como no layout anterior
+    });
+
+    if (result.isConfirmed) { // "Ignorar e Inserir"
+        return 'ignorar';
+    } else if (result.dismiss === Swal.DismissReason.cancel) { // "Cancel"
+        return 'cancelar';
+    }
+    return 'cancelar'; // Default para fechar fora ou por outras razões
+}
+
+// --- FIM DAS NOVAS FUNÇÕES PARA DUPLICATAS ---
+
+
 /**
  * Cria um elemento <td> contendo um <input> ou <select>.
  * Aplica event listeners para input, navegação com Enter, e demarcação/pintura.
@@ -118,25 +185,92 @@ function inputCell(type, readOnly = false, value = "", isPasteTarget = false, cl
     if (className) td.classList.add(className);
 
     // Event listener para mudanças de input
-    input.addEventListener("input", (e) => {
-        // Converte para minúsculas se for a coluna de unidade de medida, maiúsculas caso contrário
+    input.addEventListener("input", async (e) => {
         if (e.target.closest('td').classList.contains('unidade-medida-col')) {
             e.target.value = e.target.value.toLowerCase();
         } else {
             e.target.value = e.target.value.toUpperCase();
         }
-        verificarDuplicatas(); // Verifica duplicatas a cada alteração
-        if (td.classList.contains('nivel-col')) {
-            aplicarIndentacao(e.target.closest('tr')); // Atualiza indentação se o NÍVEL muda
-            e.target.dispatchEvent(new Event('change', { bubbles: true })); // Dispara evento change para outras lógicas
+
+        const currentRow = e.target.closest('tr');
+        const currentData = getLinhaData(currentRow);
+
+        const isCodigoMaterialCol = e.target.closest('td').classList.contains('codigo-material-col');
+        const isItemComponenteCol = e.target.closest('td').classList.contains('item-componente-col');
+
+        // Dispara o alerta de duplicata se CODIGO_MATERIAL e ITEM_COMPONENTE estiverem preenchidos
+        // E SE a mudança ocorreu em CODIGO_MATERIAL ou ITEM_COMPONENTE
+        if (currentData.CODIGO_MATERIAL && currentData.ITEM_COMPONENTE &&
+            (isCodigoMaterialCol || isItemComponenteCol)) { // Removida a condição currentData.QTDE_MONTAGEM
+
+            const existingDuplicateRow = encontrarLinhaDuplicada(
+                currentData.CODIGO_MATERIAL,
+                currentData.ITEM_COMPONENTE,
+                currentRow
+            );
+
+            if (existingDuplicateRow) {
+                const action = await mostrarAlertaDuplicata(currentData, existingDuplicateRow);
+
+                // --- Remova quaisquer efeitos de opacidade/destaque temporário após a escolha do SweetAlert ---
+                const tbodyElement = document.getElementById("listaTabela").querySelector('tbody');
+
+                // Limpa todos os destaques relacionados ao foco
+                tbodyElement.classList.remove("table-faded");
+                tabela.querySelectorAll('tr.highlight-focused-item').forEach(row => {
+                    row.classList.remove('highlight-focused-item');
+                    row.classList.remove('temp-highlight-found');
+                });
+
+                if (action === 'ignorar') {
+                    currentRow.classList.remove("no-highlight-on-ignore");
+                    Swal.fire("ℹ️ Duplicata Ignorada", "A linha será inserida normalmente e destacada.", "info");
+                } else if (action === 'cancelar') { // Seu "Não Adicionar" (agora botão Cancelar)
+                    e.target.value = "";
+                    const otherMaterialInput = currentRow.querySelector(".codigo-material-col input");
+                    const otherItemInput = currentRow.querySelector(".item-componente-col input");
+                    const qtdeInput = currentRow.querySelector(".qtde-montagem-col input");
+
+                    if (otherMaterialInput && otherMaterialInput !== e.target) otherMaterialInput.value = "";
+                    if (otherItemInput && otherItemInput !== e.target) otherItemInput.value = "";
+                    if (qtdeInput) qtdeInput.value = ""; // Limpa quantidade também, se existir e não for o input atual
+                    currentRow.classList.remove("highlight-duplicate");
+                    currentRow.classList.add("no-highlight-on-ignore"); // Impede que ela seja roxa.
+                    Swal.fire("❌ Entrada Cancelada", "Os campos foram limpos para evitar duplicata.", "info");
+                }
+            }
         }
-        atualizarColunaLinha(); // Sempre atualiza LINHA se campos relevantes mudam
+
+        verificarDuplicatas();
+        if (td.classList.contains('nivel-col')) {
+            aplicarIndentacao(e.target.closest('tr'));
+            e.target.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+        atualizarColunaLinha();
     });
 
-    // Navegação com Enter
+    // --- LISTENER: Desativa o foco e opacidade ao clicar em qualquer input/select de uma linha destacada ---
+    input.addEventListener("click", (e) => {
+        const tbodyElement = document.getElementById("listaTabela").querySelector('tbody');
+        const clickedRow = e.target.closest('tr');
+
+        // Verifica se o tbody está com o fade ativo OU se a linha clicada é uma linha focada/temporariamente destacada
+        if (tbodyElement.classList.contains("table-faded") || clickedRow.classList.contains('highlight-focused-item')) {
+            // Remove os efeitos de opacidade e o destaque temporário de TODAS as linhas e do tbody
+            tbodyElement.classList.remove("table-faded");
+
+            tabela.querySelectorAll('tr.highlight-focused-item').forEach(row => {
+                row.classList.remove('highlight-focused-item');
+                row.classList.remove('temp-highlight-found');
+            });
+        }
+    });
+
+
+    // Navegação com Enter (mantido)
     input.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') {
-            e.preventDefault(); // Previne quebra de linha padrão
+            e.preventDefault();
             const currentInput = e.target;
             const currentTd = currentInput.closest('td');
             const currentRow = currentInput.closest('tr');
@@ -145,13 +279,11 @@ function inputCell(type, readOnly = false, value = "", isPasteTarget = false, cl
 
             const nextRow = tabela.rows[currentRowIndex + 1];
             if (nextRow) {
-                // Tenta focar na mesma coluna na próxima linha
                 const nextTd = nextRow.children[currentCellIndex];
                 const nextInput = nextTd?.querySelector('input, select');
                 if (nextInput) {
                     nextInput.focus();
                 } else {
-                    // Se não houver input na mesma coluna na próxima linha, tenta a próxima célula na linha atual
                     const nextCellInRow = currentRow.children[currentCellIndex + 1];
                     const nextInputInRow = nextCellInRow?.querySelector('input, select');
                     if (nextInputInRow) {
@@ -159,10 +291,9 @@ function inputCell(type, readOnly = false, value = "", isPasteTarget = false, cl
                     }
                 }
             } else {
-                // Se for a última linha, cria uma nova linha e foca na mesma coluna dela
                 const newRow = criarLinhaVazia();
                 tabela.appendChild(newRow);
-                acaoImportouOuAdicionouLinhas(); // Atualiza SEQ e LINHA após adicionar nova linha
+                acaoImportouOuAdicionouLinhas();
                 const firstInputInNewRow = newRow.children[currentCellIndex]?.querySelector('input, select');
                 if (firstInputInNewRow) {
                     firstInputInNewRow.focus();
@@ -171,7 +302,7 @@ function inputCell(type, readOnly = false, value = "", isPasteTarget = false, cl
         }
     });
 
-    // Funcionalidade de pintura/demarcação de célula
+    // Funcionalidade de pintura/demarcação de célula (mantida)
     input.addEventListener("click", (e) => {
         if (!demarcarLinha) { // Apenas se o modo "Demarcar linha" NÃO estiver ativo
             if (removerDemarcacao) {
@@ -218,7 +349,7 @@ function selectCell(options = [], selected = "", className = "") {
         atualizarColunaLinha(); // Sempre atualiza LINHA se campos relevantes mudam
     });
 
-    // Funcionalidade de pintura/demarcação de célula
+    // Funcionalidade de pintura/demarcação de célula (mantida)
     select.addEventListener("click", (e) => {
         if (!demarcarLinha) { // Apenas se o modo "Demarcar linha" NÃO estiver ativo
             if (removerDemarcacao) {
@@ -233,7 +364,7 @@ function selectCell(options = [], selected = "", className = "") {
         }
     });
 
-    // Navegação com Enter
+    // Navegação com Enter (mantido)
     select.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') {
             e.preventDefault();
@@ -259,7 +390,7 @@ function selectCell(options = [], selected = "", className = "") {
             } else {
                 const newRow = criarLinhaVazia();
                 tabela.appendChild(newRow);
-                acaoImportouOuAdicionouLinhas(); // Atualiza SEQ e LINHA após adicionar nova linha
+                acaoImportouOuAdicionouLinhas();
                 const firstInputInNewRow = newRow.children[currentCellIndex]?.querySelector('input, select');
                 if (firstInputInNewRow) {
                     firstInputInNewRow.focus();
@@ -299,13 +430,11 @@ function criarLinha(v = {}) {
 
     // Event listener para demarcação/pintura de LINHA inteira
     row.addEventListener("click", (e) => {
-        // Ignora cliques em inputs, selects ou botões dentro da linha
         if (e.target.tagName.match(/INPUT|SELECT|BUTTON/)) return;
-        if (demarcarLinha) { // Apenas se o modo "Demarcar linha" estiver ativo
+        if (demarcarLinha) {
             if (removerDemarcacao) {
-                row.style.backgroundColor = ""; // Remove cor
+                row.style.backgroundColor = "";
             } else if (corSelecionada) {
-                // Alterna a cor: se já tem a cor selecionada, remove; senão, aplica
                 if (rgbToHex(row.style.backgroundColor) === corSelecionada.toUpperCase()) {
                     row.style.backgroundColor = "";
                 } else {
@@ -318,24 +447,20 @@ function criarLinha(v = {}) {
     // Adiciona as demais células utilizando as funções helper
     row.appendChild(selectCell(siteValores, v.SITE || "1"));
     row.appendChild(selectCell(alternativas, v.ALTERNATIVA || "*"));
-    row.appendChild(inputCell("text", false, v.CODIGO_MATERIAL || "", true));
+    row.appendChild(inputCell("text", false, v.CODIGO_MATERIAL || "", true, "codigo-material-col"));
     row.appendChild(selectCell(tiposEstrutura, v.TIPO_ESTRUTURA || "Manufatura"));
 
-    // Célula para LINHA - agora é um input somente leitura e preenchido automaticamente
     const linhaCell = inputCell("text", true, v.LINHA || "");
     linhaCell.classList.add("linha-auto-col");
     row.appendChild(linhaCell);
 
-    row.appendChild(inputCell("text", false, v.ITEM_COMPONENTE || "", true));
-    row.appendChild(inputCell("text", false, v.QTDE_MONTAGEM || "", false, "qtde-montagem-col")); // Adiciona classe para QTDE_MONTAGEM
-    // AQUI: Garantir que UNIDADE_MEDIDA use o valor corretamente
+    row.appendChild(inputCell("text", false, v.ITEM_COMPONENTE || "", true, "item-componente-col"));
+    row.appendChild(inputCell("text", false, v.QTDE_MONTAGEM || "", false, "qtde-montagem-col"));
     row.appendChild(inputCell("text", false, (v.UNIDADE_MEDIDA || "").toLowerCase(), true, "unidade-medida-col"));
     row.appendChild(selectCell(fatorSucata, v.FATOR_SUCATA || "0"));
 
-    // Aplica a indentação visual baseada no nível
     aplicarIndentacao(row);
 
-    // Esconde colunas se não estiverem ativas
     if (!seqAtivo) seqTd.style.display = "none";
     if (!nivelColVisivel) nivelCell.style.display = "none";
 
@@ -366,7 +491,7 @@ function criar10Linhas() {
 function atualizarSequencias() {
     const linhas = tabela.querySelectorAll("tr");
     linhas.forEach((row, index) => {
-        const seqTd = row.querySelectorAll("td")[1]; // Índice 1 é a coluna SEQ
+        const seqTd = row.querySelectorAll("td")[1];
         if (seqTd) seqTd.textContent = (index + 1) * 1;
     });
 }
@@ -386,44 +511,38 @@ function atualizarSequencias() {
  */
 function atualizarColunaLinha() {
     const rows = Array.from(tabela.rows);
-    const groupedData = new Map(); // Mapa para armazenar grupos de linhas por CODIGO_MATERIAL
+    const groupedData = new Map();
 
-    // Primeira passagem: Agrupar linhas e detectar "MP-" (AGORA APENAS PARA MP- GERAL, EXCLUINDO MP1-)
     rows.forEach(row => {
         const data = getLinhaData(row);
         const codigoMaterial = data.CODIGO_MATERIAL.trim();
         const itemComponente = data.ITEM_COMPONENTE.trim();
 
-        // Linhas vazias são ignoradas no agrupamento, mas terão sua LINHA esvaziada.
         if (codigoMaterial === "" && itemComponente === "") {
             const linhaInput = row.querySelectorAll("td")[7]?.querySelector("input");
             if (linhaInput) linhaInput.value = "";
-            return; // Pula o resto da lógica de agrupamento para linhas vazias
+            return;
         }
 
-        // Linhas que são "MP1-" não participam da lógica de agrupamento "MP-General"
         if (itemComponente.toUpperCase().startsWith("MP1-")) {
-            return; // Pula o resto da lógica de agrupamento para linhas MP1-
+            return;
         }
 
-        // Se tem CODIGO_MATERIAL e NÃO é MP1-, agrupa por ele
         if (codigoMaterial !== "") {
             if (!groupedData.has(codigoMaterial)) {
                 groupedData.set(codigoMaterial, {
                     rows: [],
-                    hasMPGeneral: false // Flag para "MP-" geral (sem ser MP1-)
+                    hasMPGeneral: false
                 });
             }
             const group = groupedData.get(codigoMaterial);
             group.rows.push(row);
-            // Detecta "MP-" (excluindo explicitamente "MP1-") para aplicar a regra de grupo
-            if (itemComponente.toUpperCase().startsWith("MP-")) { // Já sabemos que não é MP1- por causa do 'return' acima
+            if (itemComponente.toUpperCase().startsWith("MP-")) {
                 group.hasMPGeneral = true;
             }
         }
     });
 
-    // Segunda passagem: Atribuir valores de LINHA
     let currentCodigoMaterial = "";
     let currentSequence = 10;
 
@@ -433,49 +552,35 @@ function atualizarColunaLinha() {
         const itemComponente = data.ITEM_COMPONENTE.trim();
         const linhaInput = row.querySelectorAll("td")[7]?.querySelector("input");
 
-        if (!linhaInput) return; // Se não encontrou o input da LINHA, pula a linha
+        if (!linhaInput) return;
 
-        // Se a linha é um "separador" (vazia), sua LINHA já foi definida como vazia.
-        // Reiniciamos a sequência e o material para o próximo grupo.
         if (codigoMaterial === "" && itemComponente === "") {
             currentCodigoMaterial = "";
             currentSequence = 10;
             return;
         }
 
-        // *** REGRA 1: PRIORIDADE MÁXIMA PARA "MP1-" (APENAS PARA A LINHA ESPECÍFICA) ***
         if (itemComponente.toUpperCase().startsWith("MP1-")) {
-            linhaInput.value = "10"; // Define "10" apenas para ESTA LINHA
-            // IMPORTANTE: NÃO alteramos currentSequence nem currentCodigoMaterial aqui.
-            // Isso garante que a sequência continue para as próximas linhas como se esta não existisse para a contagem.
-            return; // Termina o processamento para esta linha e move para a próxima
+            linhaInput.value = "10";
+            return;
         }
 
-        // REGRA 2: Processamento para linhas que NÃO SÃO "MP1-"
         if (codigoMaterial !== "") {
-            // Se o CODIGO_MATERIAL mudou, ou é o primeiro item de um novo grupo
-            // (Isso só acontece se a linha atual NÃO for "MP1-")
             if (codigoMaterial !== currentCodigoMaterial) {
-                currentCodigoMaterial = codigoMaterial; // Define o novo grupo
-                currentSequence = 10; // Reinicia a sequência para este novo grupo
+                currentCodigoMaterial = codigoMaterial;
+                currentSequence = 10;
             }
 
             const group = groupedData.get(codigoMaterial);
-            // REGRA 2a: Se o grupo tem "MP-" geral (e não é MP1-), todas as linhas recebem 10
             if (group && group.hasMPGeneral) {
                 linhaInput.value = "10";
-            }
-            // REGRA 2b: Caso contrário, segue o sequenciamento normal
-            else {
+            } else {
                 linhaInput.value = String(currentSequence);
                 currentSequence += 10;
             }
         } else {
-            // Se a linha tem ITEM_COMPONENTE mas não CODIGO_MATERIAL,
-            // (e não é um "separador" e não é "MP1-").
-            // Neste caso, se não está agrupado e não tem CODIGO_MATERIAL, o campo LINHA fica vazio.
             linhaInput.value = "";
-            currentSequence = 10; // Reseta a sequência para o próximo grupo válido
+            currentSequence = 10;
             currentCodigoMaterial = "";
         }
     });
@@ -487,13 +592,12 @@ function atualizarColunaLinha() {
  * @param {HTMLTableRowElement} row - A linha (<tr>) a ser indentada.
  */
 function aplicarIndentacao(row) {
-    // Remove todas as classes de nível existentes
     for (let i = 1; i <= 10; i++) row.classList.remove(`nivel-${i}`);
-    const nivelInput = row.querySelectorAll("td")[2]?.querySelector("input"); // Índice 2 é a coluna NÍVEL
+    const nivelInput = row.querySelectorAll("td")[2]?.querySelector("input");
     if (nivelInput) {
         let nivel = parseInt(nivelInput.value);
         if (!isNaN(nivel) && nivel >= 1 && nivel <= 10) {
-            row.classList.add(`nivel-${nivel}`); // Adiciona a classe correspondente ao nível
+            row.classList.add(`nivel-${nivel}`);
         }
     }
 }
@@ -511,7 +615,7 @@ function getLinhaData(tr) {
         ALTERNATIVA: cells[4]?.querySelector("select")?.value || "",
         CODIGO_MATERIAL: cells[5]?.querySelector("input")?.value.trim().toUpperCase() || "",
         TIPO_ESTRUTURA: cells[6]?.querySelector("select")?.value || "",
-        LINHA: cells[7]?.querySelector("input")?.value || "", // Pega o valor atual (pode ser o auto-gerado)
+        LINHA: cells[7]?.querySelector("input")?.value || "",
         ITEM_COMPONENTE: cells[8]?.querySelector("input")?.value.trim().toUpperCase() || "",
         QTDE_MONTAGEM: cells[9]?.querySelector("input")?.value.trim() || "",
         UNIDADE_MEDIDA: cells[10]?.querySelector("input")?.value.trim().toLowerCase() || "",
@@ -527,46 +631,57 @@ function getLinhaData(tr) {
 function preencherLinha(row, data) {
     const cells = row.querySelectorAll("td");
     cells[2].querySelector("input").value = data.NIVEL || "";
-    aplicarIndentacao(row); // Re-aplica a indentação após preencher o NÍVEL
+    aplicarIndentacao(row);
     cells[3].querySelector("select").value = data.SITE || "1";
     cells[4].querySelector("select").value = data.ALTERNATIVA || "*";
     cells[5].querySelector("input").value = (data.CODIGO_MATERIAL || "").toUpperCase();
     cells[6].querySelector("select").value = data.TIPO_ESTRUTURA || "Manufatura";
-    // A coluna LINHA é preenchida por `atualizarColunaLinha()`, não diretamente aqui.
     cells[8].querySelector("input").value = (data.ITEM_COMPONENTE || "").toUpperCase();
-    // Substitui vírgula por ponto para QTDE_MONTAGEM e remove "0" se não for o único caractere
-    cells[9].querySelector("input").value = (data.QTDE_MONTAGEM === "0" ? "" : data.QTDE_MONTAGEM || "").replace(",", ".");
-    // AQUI: Garantir que UNIDADE_MEDIDA seja preenchida corretamente
-    cells[10].querySelector("input").value = (data.UNIDADE_MEDIDA || "").toLowerCase(); // Garante minúsculas
+    cells[9].querySelector("input").value = (data.QTDE_MONTAGEM === "0" ? "" : String(data.QTDE_MONTAGEM) || "").replace(",", ".");
+    cells[10].querySelector("input").value = (data.UNIDADE_MEDIDA || "").toLowerCase();
     cells[11].querySelector("select").value = data.FATOR_SUCATA || "0";
 }
 
 /**
  * Verifica e destaca linhas que contêm dados duplicados na tabela.
  * Ignora linhas completamente vazias e o destaque pode ser desativado via checkbox.
+ * ATUALIZADO: Agora considera duplicata APENAS se CODIGO_MATERIAL e ITEM_COMPONENTE forem idênticos.
+ * A linha que teve a duplicata IGNORADA no splash não será destacada.
  */
 function verificarDuplicatas() {
     const linhas = Array.from(tabela.rows);
-    const hashes = new Map(); // Mapa para armazenar hashes e as linhas correspondentes
-    linhas.forEach(row => { row.classList.remove("highlight-duplicate"); }); // Remove destaque anterior
-    if (ignorarDuplicatas) return; // Sai se a opção de ignorar estiver ativa
+
+    // Remove todas as classes de destaque e a classe temporária de "não destaque"
+    linhas.forEach(row => {
+        row.classList.remove("highlight-duplicate");
+        row.classList.remove("no-highlight-on-ignore");
+    });
+
+    if (ignorarDuplicatas) return;
+
+    const combinaçõesDetectadas = new Map();
 
     linhas.forEach((tr) => {
         const data = getLinhaData(tr);
-        // Ignora linhas que são completamente vazias (ambos CODIGO_MATERIAL e ITEM_COMPONENTE vazios)
-        if (data.CODIGO_MATERIAL === "" && data.ITEM_COMPONENTE === "") return;
+        if (data.CODIGO_MATERIAL === "" || data.ITEM_COMPONENTE === "") {
+            return;
+        }
 
-        // Cria um hash único para identificar duplicatas
-        // Adicionando NIVEL e TIPO_ESTRUTURA ao hash para uma verificação mais precisa de duplicatas
-        const hash = `${data.SITE}|${data.ALTERNATIVA}|${data.CODIGO_MATERIAL}|${data.NIVEL}|${data.TIPO_ESTRUTURA}|${data.LINHA}|${data.ITEM_COMPONENTE}|${data.UNIDADE_MEDIDA}|${data.FATOR_SUCATA}`;
-        if (!hashes.has(hash)) hashes.set(hash, []);
-        hashes.get(hash).push(tr); // Adiciona a linha ao array do hash correspondente
+        const hash = `${data.CODIGO_MATERIAL.toUpperCase()}|${data.ITEM_COMPONENTE.toUpperCase()}`;
+
+        if (!combinaçõesDetectadas.has(hash)) {
+            combinaçõesDetectadas.set(hash, []);
+        }
+        combinaçõesDetectadas.get(hash).push(tr);
     });
 
-    // Percorre o mapa para encontrar e destacar hashes com mais de uma linha (duplicatas)
-    for (const [hash, rows] of hashes) {
+    for (const [hash, rows] of combinaçõesDetectadas) {
         if (rows.length > 1) {
-            rows.forEach(row => { row.classList.add("highlight-duplicate"); }); // Adiciona classe de destaque
+            rows.forEach(row => {
+                if (!row.classList.contains("no-highlight-on-ignore")) {
+                    row.classList.add("highlight-duplicate");
+                }
+            });
         }
     }
 }
@@ -580,12 +695,12 @@ function rgbToHex(rgb) {
     if (!rgb || rgb.indexOf('rgb') === -1) return rgb ? rgb.toUpperCase() : "";
     const parts = rgb.match(/^rgb\((\d+),\s*(\d+),\s*(\d+)\)$/);
     if (!parts) return "";
-    delete parts[0]; // Remove o primeiro elemento que é a string completa da regex
+    delete parts[0];
     for (let i = 1; i <= 3; i++) {
-        parts[i] = parseInt(parts[i]).toString(16); // Converte para hexadecimal
-        if (parts[i].length === 1) parts[i] = "0" + parts[i]; // Adiciona zero à esquerda se necessário
+        parts[i] = parseInt(parts[i]).toString(16);
+        if (parts[i].length === 1) parts[i] = "0" + parts[i];
     }
-    return "#" + parts.join("").toUpperCase(); // Junta as partes e retorna em maiúsculas
+    return "#" + parts.join("").toUpperCase();
 }
 
 /**
@@ -593,7 +708,6 @@ function rgbToHex(rgb) {
  * Inclui apenas as colunas especificadas e ignora linhas "vazias" (separadores).
  */
 function exportarParaExcel() {
-    // Define os cabeçalhos desejados para a exportação
     const ws_data = [
         ["NIVEL", "SITE", "ALTERNATIVA", "CODIGO_MATERIAL", "TIPO ESTRUTURA", "LINHA", "ITEM_COMPONENTE", "QTDE_MONTAGEM", "UNIDADE DE MEDIDA", "FATOR_SUCATA"]
     ];
@@ -601,9 +715,8 @@ function exportarParaExcel() {
     tabela.querySelectorAll("tr").forEach(row => {
         const rowData = getLinhaData(row);
 
-        // Filtra linhas que são "separadores" (ambos vazios)
         if (rowData.CODIGO_MATERIAL === "" && rowData.ITEM_COMPONENTE === "") {
-            return; // Pula esta linha, não a inclui na exportação
+            return;
         }
 
         const dataRow = [
@@ -621,16 +734,15 @@ function exportarParaExcel() {
         ws_data.push(dataRow);
     });
 
-    if (ws_data.length <= 1) { // Apenas os cabeçalhos estão presentes
+    if (ws_data.length <= 1) {
         Swal.fire("ℹ️ Nada para Exportar", "A tabela está vazia ou contém apenas linhas sem dados preenchidos.", "info");
         return;
     }
 
-    const ws = XLSX.utils.aoa_to_sheet(ws_data); // Cria a planilha a partir do array de arrays
-    const wb = XLSX.utils.book_new(); // Cria um novo livro Excel
-    XLSX.utils.book_append_sheet(wb, ws, "Lista Tecnica"); // Adiciona a planilha ao livro
+    const ws = XLSX.utils.aoa_to_sheet(ws_data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Lista Tecnica");
 
-    // Adição do timestamp ao nome do arquivo
     const now = new Date();
     const dateStr = now.getFullYear() + "-" +
                     String(now.getMonth() + 1).padStart(2, '0') + "-" +
@@ -639,9 +751,9 @@ function exportarParaExcel() {
                     String(now.getMinutes()).padStart(2, '0') + "-" +
                     String(now.getSeconds()).padStart(2, '0');
 
-    XLSX.writeFile(wb, `Lista_Tecnica_${dateStr}.xlsx`); // Escreve e baixa o arquivo Excel com timestamp
+    XLSX.writeFile(wb, `Lista_Tecnica_${dateStr}.xlsx`);
 
-    Swal.fire("✅ Exportado!", `A lista foi exportada para 'Lista_Tecnica_${dateStr}.xlsx'.`, "success"); // Atualiza a mensagem de sucesso
+    Swal.fire("✅ Exportado!", `A lista foi exportada para 'Lista_Tecnica_${dateStr}.xlsx'.`, "success");
 
 }
 
@@ -664,43 +776,33 @@ function carregarExcel(inputElement) {
         const workbook = XLSX.read(data, { type: 'array' });
         const firstSheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[firstSheetName];
-        // Converte a planilha para um array de arrays, onde a primeira linha é o cabeçalho
         const json = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
 
-        if (json.length === 0 || !json[0]) { // Adicionado !json[0] para verificar se há cabeçalhos
+        if (json.length === 0 || !json[0]) {
             Swal.fire("⚠️ Arquivo Vazio ou Inválido", "O arquivo Excel está vazio, não contém cabeçalhos ou dados.", "warning");
             return;
         }
 
-        // Limpa a tabela existente antes de carregar novos dados
         tabela.innerHTML = "";
 
-        // Mapeia os cabeçalhos do Excel para encontrar os índices das colunas
-        // Normaliza os cabeçalhos do Excel: remove espaços, substitui por '_' e coloca em maiúsculas
         const headers = json[0].map(h => String(h).trim().replace(/\s/g, '_').toUpperCase());
-        const dataRows = json.slice(1); // Remove a linha de cabeçalho dos dados
+        const dataRows = json.slice(1);
 
-        /**
-         * Mapeamento dos índices das colunas esperadas com base nos cabeçalhos do Excel normalizados.
-         * Nomes corrigidos para corresponder ao padrão do Excel após normalização.
-         */
         const colIndices = {
             NIVEL: headers.indexOf("NIVEL"),
             SITE: headers.indexOf("SITE"),
             ALTERNATIVA: headers.indexOf("ALTERNATIVA"),
             CODIGO_MATERIAL: headers.indexOf("CODIGO_MATERIAL"),
             TIPO_ESTRUTURA: headers.indexOf("TIPO_ESTRUTURA"),
-            LINHA: headers.indexOf("LINHA"), // Incluído para referência, embora seja autopreenchido
+            LINHA: headers.indexOf("LINHA"),
             ITEM_COMPONENTE: headers.indexOf("ITEM_COMPONENTE"),
             QTDE_MONTAGEM: headers.indexOf("QTDE_MONTAGEM"),
-            // Múltiplas opções para UNIDADE_MEDIDA para maior robustez
             UNIDADE_MEDIDA: headers.indexOf("UNIDADE_DE_MEDIDA") !== -1 ?
                             headers.indexOf("UNIDADE_DE_MEDIDA") :
-                            headers.indexOf("UNIDADE_MEDIDA"), // Tenta sem underscore se o primeiro falhar
+                            headers.indexOf("UNIDADE_MEDIDA"),
             FATOR_SUCATA: headers.indexOf("FATOR_SUCATA")
         };
 
-        // Log de depuração para verificar mapeamento de colunas (pode ser removido em produção)
         console.log("Cabeçalhos do Excel (normalizados):", headers);
         console.log("Índices de Colunas Mapeados:", colIndices);
         for (const key in colIndices) {
@@ -709,11 +811,8 @@ function carregarExcel(inputElement) {
             }
         }
 
-        // Processa cada linha de dados do Excel
         dataRows.forEach(rowData => {
             const rowObj = {
-                // Usa String() para garantir que os valores sejam tratados como string
-                // Garante valor vazio se o índice for -1 ou o dado for undefined/null
                 NIVEL: colIndices.NIVEL !== -1 && rowData[colIndices.NIVEL] !== undefined ? String(rowData[colIndices.NIVEL]) : "",
                 SITE: colIndices.SITE !== -1 && rowData[colIndices.SITE] !== undefined ? String(rowData[colIndices.SITE]) : "1",
                 ALTERNATIVA: colIndices.ALTERNATIVA !== -1 && rowData[colIndices.ALTERNATIVA] !== undefined ? String(rowData[colIndices.ALTERNATIVA]) : "*",
@@ -721,7 +820,6 @@ function carregarExcel(inputElement) {
                 TIPO_ESTRUTURA: colIndices.TIPO_ESTRUTURA !== -1 && rowData[colIndices.TIPO_ESTRUTURA] !== undefined ? String(rowData[colIndices.TIPO_ESTRUTURA]) : "Manufatura",
                 ITEM_COMPONENTE: colIndices.ITEM_COMPONENTE !== -1 && rowData[colIndices.ITEM_COMPONENTE] !== undefined ? String(rowData[colIndices.ITEM_COMPONENTE]) : "",
                 QTDE_MONTAGEM: colIndices.QTDE_MONTAGEM !== -1 && rowData[colIndices.QTDE_MONTAGEM] !== undefined ? String(rowData[colIndices.QTDE_MONTAGEM]) : "",
-                // AQUI: Garantir que UNIDADE_MEDIDA seja corretamente passada e em minúsculas
                 UNIDADE_MEDIDA: colIndices.UNIDADE_MEDIDA !== -1 && rowData[colIndices.UNIDADE_MEDIDA] !== undefined ? String(rowData[colIndices.UNIDADE_MEDIDA]).toLowerCase() : "",
                 FATOR_SUCATA: colIndices.FATOR_SUCATA !== -1 && rowData[colIndices.FATOR_SUCATA] !== undefined ? String(rowData[colIndices.FATOR_SUCATA]) : "0"
             };
@@ -729,7 +827,6 @@ function carregarExcel(inputElement) {
             tabela.appendChild(newRow);
         });
 
-        // Executa as ações de atualização após a importação (SEQ, LINHA, Duplicatas)
         acaoImportouOuAdicionouLinhas();
         Swal.fire("✅ Importado!", "Os dados do Excel foram carregados e atualizados.", "success");
     };
@@ -743,7 +840,7 @@ function carregarExcel(inputElement) {
  */
 function acaoImportouOuAdicionouLinhas() {
     atualizarSequencias();
-    atualizarColunaLinha(); // Garante que LINHA seja preenchida corretamente para todas as linhas
+    atualizarColunaLinha();
     verificarDuplicatas();
 }
 
@@ -754,9 +851,9 @@ function acaoImportouOuAdicionouLinhas() {
  * Limpa a tabela e adiciona 10 linhas vazias.
  */
 document.getElementById("criarListaBtn").addEventListener("click", () => {
-    tabela.innerHTML = ""; // Limpa a tabela
-    criar10Linhas(); // Adiciona 10 linhas vazias
-    acaoImportouOuAdicionouLinhas(); // Atualiza SEQ, LINHA, e Duplicatas
+    tabela.innerHTML = "";
+    criar10Linhas();
+    acaoImportouOuAdicionouLinhas();
     Swal.fire("✅ Lista Criada!", "10 novas linhas foram adicionadas.", "success");
 });
 
@@ -765,8 +862,8 @@ document.getElementById("criarListaBtn").addEventListener("click", () => {
  * Adiciona 10 linhas vazias ao final da tabela existente.
  */
 document.getElementById("continuarListaBtn").addEventListener("click", () => {
-    criar10Linhas(); // Adiciona 10 linhas vazias
-    acaoImportouOuAdicionouLinhas(); // Atualiza SEQ, LINHA, e Duplicatas
+    criar10Linhas();
+    acaoImportouOuAdicionouLinhas();
     Swal.fire("➕ Adicionado", "10 novas linhas foram inseridas.", "success");
 });
 
@@ -786,13 +883,16 @@ document.getElementById("copiarSelecionadoBtn").addEventListener("click", () => 
         Swal.fire("⚠️ Nada para Copiar", "Nenhuma linha selecionada para cópia.", "warning");
         return;
     }
-    cacheCopiado = linhasSelecionadas.map(row => getLinhaData(row)); // Armazena os dados das linhas copiadas
+    cacheCopiado = linhasSelecionadas.map(row => getLinhaData(row));
     Swal.fire("✅ Copiado!", `${cacheCopiado.length} linhas copiadas.`, "success");
 });
 
 /**
  * Listener para o botão "Colar".
  * Cola os dados do cache em novas linhas ou sobrescreve linhas selecionadas.
+ * ATUALIZADO: NÃO USA A NOVA LÓGICA DE DUPLICATAS COM SPLASH.
+ * A lógica de DUPLICATAS COM SPLASH é implementada no `handlePasteMultipleLines` para colagem de texto em células.
+ * Este botão "Colar" é para colar LINHAS COPIADAS (de `cacheCopiado`).
  */
 document.getElementById("colarBtn").addEventListener("click", () => {
     if (cacheCopiado.length === 0) {
@@ -801,22 +901,19 @@ document.getElementById("colarBtn").addEventListener("click", () => {
     }
 
     const linhasSelecionadas = Array.from(tabela.querySelectorAll(".linha-selecao:checked")).map(cb => cb.closest("tr"));
-    // Determina o índice de início da colagem: primeira linha selecionada ou final da tabela
     const startIndex = linhasSelecionadas.length > 0 ? Array.from(tabela.rows).indexOf(linhasSelecionadas[0]) : tabela.rows.length;
 
     cacheCopiado.forEach((rowData, i) => {
         const targetRow = tabela.rows[startIndex + i];
         if (targetRow) {
-            // Se houver uma linha alvo, preenche ela
             preencherLinha(targetRow, rowData);
         } else {
-            // Se não houver, cria uma nova linha
             const newRow = criarLinha(rowData);
             tabela.appendChild(newRow);
         }
     });
 
-    acaoImportouOuAdicionouLinhas(); // Atualiza SEQ, LINHA, e Duplicatas após colar
+    acaoImportouOuAdicionouLinhas();
     Swal.fire("✅ Colado!", `${cacheCopiado.length} linhas coladas.`, "success");
 });
 
@@ -831,7 +928,6 @@ document.getElementById("deletarSelecionadosBtn").addEventListener("click", () =
         return;
     }
 
-    // Confirmação antes de deletar
     Swal.fire({
         title: 'Tem certeza?',
         text: `Você vai deletar ${linhasParaDeletar.length} linha(s).`,
@@ -843,8 +939,8 @@ document.getElementById("deletarSelecionadosBtn").addEventListener("click", () =
         cancelButtonText: 'Cancelar'
     }).then((result) => {
         if (result.isConfirmed) {
-            linhasParaDeletar.forEach(row => row.remove()); // Remove as linhas
-            acaoImportouOuAdicionouLinhas(); // Atualiza SEQ, LINHA, e Duplicatas
+            linhasParaDeletar.forEach(row => row.remove());
+            acaoImportouOuAdicionouLinhas();
             Swal.fire('Deletado!', `${linhasParaDeletar.length} linha(s) foram deletadas.`, 'success');
         }
     });
@@ -862,8 +958,8 @@ document.getElementById("inserirAcimaBtn").addEventListener("click", () => {
     }
     const primeiraLinhaSelecionada = linhasSelecionadas[0];
     const novaLinha = criarLinhaVazia();
-    tabela.insertBefore(novaLinha, primeiraLinhaSelecionada); // Insere antes da linha selecionada
-    acaoImportouOuAdicionouLinhas(); // Atualiza SEQ, LINHA, e Duplicatas
+    tabela.insertBefore(novaLinha, primeiraLinhaSelecionada);
+    acaoImportouOuAdicionouLinhas();
     Swal.fire("⬆️ Inserido", "Uma nova linha foi inserida acima da seleção.", "success");
 });
 
@@ -880,13 +976,11 @@ document.getElementById("inserirAbaixoBtn").addEventListener("click", () => {
     const ultimaLinhaSelecionada = linhasSelecionadas[linhasSelecionadas.length - 1];
     const novaLinha = criarLinhaVazia();
     if (ultimaLinhaSelecionada.nextElementSibling) {
-        // Se houver uma próxima linha, insere antes dela
         tabela.insertBefore(novaLinha, ultimaLinhaSelecionada.nextElementSibling);
     } else {
-        // Caso contrário, adiciona ao final da tabela
         tabela.appendChild(novaLinha);
     }
-    acaoImportouOuAdicionouLinhas(); // Atualiza SEQ, LINHA, e Duplicatas
+    acaoImportouOuAdicionouLinhas();
     Swal.fire("⬇️ Inserido", "Uma nova linha foi inserida abaixo da seleção.", "success");
 });
 
@@ -895,9 +989,9 @@ document.getElementById("inserirAbaixoBtn").addEventListener("click", () => {
  * Alterna a visibilidade da coluna "SEQ".
  */
 document.getElementById("toggleSeqBtn").addEventListener("click", () => {
-    seqAtivo = !seqAtivo; // Inverte o estado
-    document.getElementById("listaTabela").classList.toggle("seq-col-hidden", !seqAtivo); // Adiciona/remove classe CSS
-    document.getElementById("toggleSeqBtn").textContent = seqAtivo ? "👁️ SEQ" : "✖️ SEQ"; // Atualiza texto do botão
+    seqAtivo = !seqAtivo;
+    document.getElementById("listaTabela").classList.toggle("seq-col-hidden", !seqAtivo);
+    document.getElementById("toggleSeqBtn").textContent = seqAtivo ? "👁️ SEQ" : "✖️ SEQ";
 });
 
 /**
@@ -905,9 +999,9 @@ document.getElementById("toggleSeqBtn").addEventListener("click", () => {
  * Alterna a visibilidade da coluna "NÍVEL".
  */
 document.getElementById("toggleNivelColBtn").addEventListener("click", () => {
-    nivelColVisivel = !nivelColVisivel; // Inverte o estado
-    document.getElementById("listaTabela").classList.toggle("nivel-col-hidden", !nivelColVisivel); // Adiciona/remove classe CSS
-    document.getElementById("toggleNivelColBtn").textContent = nivelColVisivel ? "👁️ NÍVEL" : "✖️ NÍVEL"; // Atualiza texto do botão
+    nivelColVisivel = !nivelColVisivel;
+    document.getElementById("listaTabela").classList.toggle("nivel-col-hidden", !nivelColVisivel);
+    document.getElementById("toggleNivelColBtn").textContent = nivelColVisivel ? "👁️ NÍVEL" : "✖️ NÍVEL";
 });
 
 /**
@@ -915,11 +1009,11 @@ document.getElementById("toggleNivelColBtn").addEventListener("click", () => {
  * Alterna o efeito de destaque de linha ao passar o mouse (régua).
  */
 document.getElementById("toggleHoverEffectBtn").addEventListener("click", () => {
-    hoverEffectAtivo = !hoverEffectAtivo; // Inverte o estado
+    hoverEffectAtivo = !hoverEffectAtivo;
     const tableElement = document.getElementById("listaTabela");
     tableElement.classList.toggle("hover-effect", hoverEffectAtivo);
     tableElement.classList.toggle("no-hover-effect", !hoverEffectAtivo);
-    document.getElementById("toggleHoverEffectBtn").textContent = hoverEffectAtivo ? "📏 Régua" : "✖️ Régua"; // Atualiza texto do botão
+    document.getElementById("toggleHoverEffectBtn").textContent = hoverEffectAtivo ? "📏 Régua" : "✖️ Régua";
 });
 
 // --- Event Listeners para Controles de Pintura e Destaque ---
@@ -943,7 +1037,7 @@ document.getElementById("clearPaintBtn").addEventListener("click", () => {
  */
 document.getElementById("demarcarLinhaCheckbox").addEventListener("change", (e) => {
     demarcarLinha = e.target.checked;
-    if (demarcarLinha) removerDemarcacao = false; // Desativa "Remover demarcação" se "Demarcar linha" está ativo
+    if (demarcarLinha) removerDemarcacao = false;
     document.getElementById("removerDemarcacaoCheckbox").checked = false;
 });
 
@@ -953,7 +1047,7 @@ document.getElementById("demarcarLinhaCheckbox").addEventListener("change", (e) 
  */
 document.getElementById("removerDemarcacaoCheckbox").addEventListener("change", (e) => {
     removerDemarcacao = e.target.checked;
-    if (removerDemarcacao) demarcarLinha = false; // Desativa "Demarcar linha" se "Remover demarcação" está ativo
+    if (removerDemarcacao) demarcarLinha = false;
     document.getElementById("demarcarLinhaCheckbox").checked = false;
 });
 
@@ -968,7 +1062,7 @@ nivelColors.forEach((color, index) => {
     const button = document.createElement("button");
     button.classList.add("paint-btn");
     button.style.backgroundColor = color;
-    button.style.color = getContrastColor(color); // Define cor do texto para contraste
+    button.style.color = getContrastColor(color);
     button.textContent = `Nível ${index + 1}`;
     button.dataset.color = color;
     button.addEventListener("click", (e) => {
@@ -997,18 +1091,17 @@ document.querySelectorAll("#attentionColorButtons .paint-btn").forEach(button =>
  */
 function getContrastColor(hexcolor) {
     if (!hexcolor.startsWith("#")) {
-        return "black"; // Retorna preto para cores não-hexadecimais
+        return "black";
     }
     const r = parseInt(hexcolor.slice(1, 3), 16);
     const g = parseInt(hexcolor.slice(3, 5), 16);
     const b = parseInt(hexcolor.slice(5, 7), 16);
-    // Fórmula HSP (Highly Sensitive Poo) para luminância
     const hsp = Math.sqrt(
         0.299 * (r * r) +
         0.587 * (g * g) +
         0.114 * (b * b)
     );
-    return (hsp > 127.5) ? "black" : "white"; // Retorna preto para cores claras, branco para escuras
+    return (hsp > 127.5) ? "black" : "white";
 }
 
 /**
@@ -1017,7 +1110,7 @@ function getContrastColor(hexcolor) {
  */
 document.getElementById("ignorarDuplicatasCheckbox").addEventListener("change", (e) => {
     ignorarDuplicatas = e.target.checked;
-    verificarDuplicatas(); // Re-executa para remover/adicionar destaque
+    verificarDuplicatas();
 });
 
 // --- Sincronização de Checkboxes de Seleção Total ---
@@ -1028,9 +1121,9 @@ document.getElementById("ignorarDuplicatasCheckbox").addEventListener("change", 
  */
 document.getElementById("toggleAllCheckboxesHeader").addEventListener("change", (e) => {
     const isChecked = e.target.checked;
-    document.getElementById("toggleAllCheckboxes").checked = isChecked; // Sincroniza com o checkbox do cabeçalho da tabela
+    document.getElementById("toggleAllCheckboxes").checked = isChecked;
     tabela.querySelectorAll(".linha-selecao").forEach(checkbox => {
-        checkbox.checked = isChecked; // Marca/desmarca todas as linhas
+        checkbox.checked = isChecked;
     });
 });
 
@@ -1040,9 +1133,9 @@ document.getElementById("toggleAllCheckboxesHeader").addEventListener("change", 
  */
 document.getElementById("toggleAllCheckboxes").addEventListener("change", (e) => {
     const isChecked = e.target.checked;
-    document.getElementById("toggleAllCheckboxesHeader").checked = isChecked; // Sincroniza com o checkbox do painel de controle
+    document.getElementById("toggleAllCheckboxesHeader").checked = isChecked;
     tabela.querySelectorAll(".linha-selecao").forEach(checkbox => {
-        checkbox.checked = isChecked; // Marca/desmarca todas as linhas
+        checkbox.checked = isChecked;
     });
 });
 
@@ -1054,7 +1147,7 @@ document.getElementById("toggleAllCheckboxes").addEventListener("change", (e) =>
  */
 document.getElementById("inputFile").addEventListener("change", function (e) {
     carregarExcel(e.target);
-    e.target.value = ''; // Limpa o input para que o mesmo arquivo possa ser selecionado novamente
+    e.target.value = '';
 });
 
 
@@ -1065,13 +1158,13 @@ document.addEventListener('paste', handlePasteMultipleLines);
 /**
  * Função para colar múltiplos valores em qualquer campo da tabela (com suporte para criar linhas e ignorar cabeçalho).
  * Ativada por um evento 'paste' no documento.
+ * ATUALIZADO: Lógica de detecção de duplicatas com splash para CODIGO_MATERIAL e ITEM_COMPONENTE.
  * @param {ClipboardEvent} event - O evento de colagem.
  */
-function handlePasteMultipleLines(event) {
+async function handlePasteMultipleLines(event) {
     const pastedText = (event.clipboardData || window.clipboardData).getData('text');
     if (!pastedText) return;
 
-    // Divide o texto em linhas, ignora vazias e espaços
     const lines = pastedText
         .split(/\r?\n/)
         .map(line => line.trim())
@@ -1082,22 +1175,16 @@ function handlePasteMultipleLines(event) {
         return;
     }
 
-    // Lista de cabeçalhos para ignorar (adicione se precisar)
-    // Usamos um conjunto para pesquisa mais eficiente
     const possibleHeaders = new Set([
         'seq', 'codigo_material', 'codigo', 'qtd', 'qtde', 'un', 'unidade_de_medida', 'unidade_medida', 'unidade', 'descricao', 'item_componente', 'item', 'linha', 'nivel', 'site', 'alternativa', 'tipo_estrutura', 'fator_sucata'
     ]);
 
-    // Remove acentos e caracteres especiais para comparar cabeçalho
     const normalizeHeader = str => str.normalize('NFD').replace(/[\u0300-\u036f\s_]/g, "").toLowerCase();
     const firstLineNormalized = normalizeHeader(lines[0]);
 
-    // Verifica se a primeira linha parece ser um cabeçalho
-    // Consideramos cabeçalho se a primeira palavra normalizada da linha corresponder a um de nossos cabeçalhos possíveis
     const isHeader = Array.from(possibleHeaders).some(header => firstLineNormalized.startsWith(normalizeHeader(header)));
 
-    const startLineIndex = isHeader ? 1 : 0;
-    const realLines = lines.slice(startLineIndex);
+    const realLines = lines.slice(isHeader ? 1 : 0);
 
     if (realLines.length === 0) {
         Swal.fire("⚠️ Nenhum dado colável", "Apenas cabeçalho foi colado ou não há dados para colar.", "warning");
@@ -1105,68 +1192,140 @@ function handlePasteMultipleLines(event) {
     }
 
     const activeElement = document.activeElement;
-    // Garante que a colagem só ocorra em inputs/selects dentro da tabela
     if (
         activeElement &&
         (activeElement.tagName === 'INPUT' || activeElement.tagName === 'SELECT') &&
         activeElement.closest('#listaTabela')
     ) {
-        Swal.fire({
+        const confirmPaste = await Swal.fire({
             title: `Colar ${realLines.length} item(s)?`,
             html: `Você está prestes a colar <strong>${realLines.length}</strong> valor(es) a partir da célula selecionada. <br>Novas linhas serão criadas se necessário.`,
             icon: 'question',
             showCancelButton: true,
             confirmButtonText: 'OK',
             cancelButtonText: 'Cancelar'
-        }).then((result) => {
-            if (!result.isConfirmed) return;
+        });
 
-            const targetRow = activeElement.closest('tr');
-            const targetTd = activeElement.closest('td');
-            const rowIndex = Array.from(tabela.rows).indexOf(targetRow);
-            const columnIndex = Array.from(targetRow.children).indexOf(targetTd);
+        if (!confirmPaste.isConfirmed) {
+            event.preventDefault();
+            Swal.fire("❌ Colagem Cancelada", "A colagem foi interrompida.", "info");
+            return;
+        }
 
-            let itemsPastedCount = 0;
+        event.preventDefault();
 
-            for (let i = 0; i < realLines.length; i++) {
-                let rowToUpdate = tabela.rows[rowIndex + i];
+        const targetRow = activeElement.closest('tr');
+        const targetTd = activeElement.closest('td');
+        const rowIndex = Array.from(tabela.rows).indexOf(targetRow);
+        const columnIndex = Array.from(targetRow.children).indexOf(targetTd);
 
-                // Cria novas linhas se necessário
-                if (!rowToUpdate) {
-                    rowToUpdate = criarLinhaVazia();
-                    tabela.appendChild(rowToUpdate);
+        const isCodigoMaterialCol = targetTd.classList.contains('codigo-material-col');
+        const isItemComponenteCol = targetTd.classList.contains('item-componente-col');
+        const isQtdeMontagemCol = targetTd.classList.contains('qtde-montagem-col');
+
+        let itemsPastedCount = 0;
+        let cancelledDuringProcessing = false;
+
+        for (let i = 0; i < realLines.length; i++) {
+            if (cancelledDuringProcessing) break;
+
+            let rowToProcess = tabela.rows[rowIndex + i];
+            let isNewlyCreatedRow = false;
+
+            if (!rowToProcess) {
+                rowToProcess = criarLinhaVazia();
+                tabela.appendChild(rowToProcess);
+                isNewlyCreatedRow = true;
+            }
+
+            const inputToUpdate = rowToProcess.children[columnIndex]?.querySelector('input, select');
+            if (!inputToUpdate) continue;
+
+            let valueToPaste = realLines[i];
+
+            // Aplica o valor colado ao campo correto
+            if (isCodigoMaterialCol) {
+                inputToUpdate.value = valueToPaste.toUpperCase();
+            } else if (isItemComponenteCol) {
+                inputToUpdate.value = valueToPaste.toUpperCase();
+            } else if (isQtdeMontagemCol) {
+                inputToUpdate.value = valueToPaste.replace(',', '.');
+            } else {
+                if (inputToUpdate.closest('td').classList.contains('unidade-medida-col')) {
+                    inputToUpdate.value = valueToPaste.toLowerCase();
+                } else if (inputToUpdate.closest('td').classList.contains('nivel-col')) {
+                    inputToUpdate.value = valueToPaste.trim();
+                } else {
+                    inputToUpdate.value = valueToPaste.toUpperCase();
                 }
+                inputToUpdate.dispatchEvent(new Event('input', { bubbles: true }));
+                itemsPastedCount++;
+                continue;
+            }
 
-                const inputToUpdate = rowToUpdate.children[columnIndex]?.querySelector('input, select');
-                if (inputToUpdate) {
-                    let valueToPaste = realLines[i]; // Mantém o valor original antes de normalizar
+            const updatedRowData = getLinhaData(rowToProcess);
+            let currentMaterial = updatedRowData.CODIGO_MATERIAL;
+            let currentItemComponente = updatedRowData.ITEM_COMPONENTE;
+            let currentQtdeMontagem = updatedRowData.QTDE_MONTAGEM;
 
-                    // Lógica para normalização dos campos específicos
-                    if (inputToUpdate.closest('td').classList.contains('unidade-medida-col')) {
-                        valueToPaste = valueToPaste.toLowerCase();
-                    } else if (inputToUpdate.closest('td').classList.contains('nivel-col')) {
-                        valueToPaste = valueToPaste.trim(); // Nível pode ter espaços
-                    } else if (inputToUpdate.closest('td').classList.contains('qtde-montagem-col')) {
-                        valueToPaste = valueToPaste.replace(',', '.'); // Substitui vírgula por ponto para quantidades
-                    } else {
-                        // Para outros campos de texto, como Código Material e Item Componente
-                        valueToPaste = valueToPaste.toUpperCase();
+
+            // Dispara o alerta de duplicata se CODIGO_MATERIAL e ITEM_COMPONENTE estiverem preenchidos
+            if (currentMaterial && currentItemComponente) { // Removida a condição currentQtdeMontagem
+                const existingDuplicateRow = encontrarLinhaDuplicada(
+                    currentMaterial,
+                    currentItemComponente,
+                    rowToProcess
+                );
+
+                if (existingDuplicateRow) {
+                    const tempNewData = {
+                        CODIGO_MATERIAL: currentMaterial,
+                        ITEM_COMPONENTE: currentItemComponente,
+                        QTDE_MONTAGEM: currentQtdeMontagem
+                    };
+                    const action = await mostrarAlertaDuplicata(tempNewData, existingDuplicateRow);
+
+                    // Reverte a opacidade da tabela e da linha focada após qualquer ação no SweetAlert
+                    const tbodyElement = document.getElementById("listaTabela").querySelector('tbody');
+                    tbodyElement.classList.remove("table-faded");
+                    tabela.querySelectorAll('tr.highlight-focused-item').forEach(row => {
+                        row.classList.remove('highlight-focused-item');
+                        row.classList.remove('temp-highlight-found');
+                    });
+
+                    if (action === 'ignorar') {
+                        inputToUpdate.dispatchEvent(new Event('input', { bubbles: true }));
+                        itemsPastedCount++;
+                    } else if (action === 'cancelar') {
+                        inputToUpdate.value = "";
+                        const otherMaterialInput = rowToProcess.querySelector(".codigo-material-col input");
+                        const otherItemInput = rowToProcess.querySelector(".item-componente-col input");
+                        if (otherMaterialInput && otherMaterialInput !== inputToUpdate) otherMaterialInput.value = "";
+                        if (otherItemInput && otherItemInput !== inputToUpdate) otherItemInput.value = "";
+                        const qtdeInput = rowToProcess.querySelector(".qtde-montagem-col input");
+                        if (qtdeInput) qtdeInput.value = ""; // Limpa quantidade também
+
+                        if (isNewlyCreatedRow) {
+                             rowToProcess.remove();
+                        }
+                        cancelledDuringProcessing = true;
+                        Swal.fire("❌ Colagem Interrompida", "Operação cancelada pelo usuário.", "info");
+                        break;
                     }
-
-                    inputToUpdate.value = valueToPaste;
-                    // Dispara o evento 'input' para que as outras lógicas (duplicatas, LINHA, indentação) sejam atualizadas
-                    // Isso é importante porque a alteração via JS não dispara 'input' automaticamente
+                } else {
                     inputToUpdate.dispatchEvent(new Event('input', { bubbles: true }));
                     itemsPastedCount++;
                 }
+            } else {
+                inputToUpdate.dispatchEvent(new Event('input', { bubbles: true }));
+                itemsPastedCount++;
             }
-            acaoImportouOuAdicionouLinhas(); // Força uma atualização completa após a colagem em massa
+        }
+        acaoImportouOuAdicionouLinhas();
+        if (!cancelledDuringProcessing) {
             Swal.fire("✅ Colagem concluída!", `Foram colados ${itemsPastedCount} item(s) com sucesso.`, "success");
-        });
-        event.preventDefault(); // Previne a ação de colagem padrão do navegador
+        }
     } else {
-        // Se o elemento ativo não é um campo da tabela, permite a colagem padrão do navegador
-        // para não bloquear colagens em outros lugares (e.g., barra de pesquisa)
         console.log("Colagem em elemento não gerenciado pela tabela, permitindo padrão.");
     }
 }
@@ -1181,23 +1340,19 @@ function handlePasteMultipleLines(event) {
  */
 document.addEventListener("DOMContentLoaded", () => {
     if (tabela.rows.length === 0) {
-        criar10Linhas(); // Cria 10 linhas iniciais se a tabela estiver vazia
-        acaoImportouOuAdicionouLinhas(); // Aplica regras de SEQ, LINHA, e Duplicatas
+        criar10Linhas();
+        acaoImportouOuAdicionouLinhas();
         Swal.fire("🎉 Bem-vindo!", "A lista foi inicializada com 10 linhas para você começar.", "info");
     } else {
-        // Se já houver conteúdo (e.g., após um refresh ou carregamento prévio),
-        // garante que LINHA e SEQ estejam corretas.
         acaoImportouOuAdicionouLinhas();
     }
 
-    // Aplica classes CSS para controlar a visibilidade das colunas e efeitos
     const tabelaElement = document.getElementById("listaTabela");
     if (!seqAtivo) tabelaElement.classList.add("seq-col-hidden");
     if (!nivelColVisivel) tabelaElement.classList.add("nivel-col-hidden");
     if (hoverEffectAtivo) tabelaElement.classList.add("hover-effect");
     else tabelaElement.classList.add("no-hover-effect");
 
-    // Inicializa o texto dos botões de alternância de visibilidade
     document.getElementById("toggleSeqBtn").textContent = seqAtivo ? "👁️ SEQ" : "✖️ SEQ";
     document.getElementById("toggleNivelColBtn").textContent = nivelColVisivel ? "👁️ NÍVEL" : "✖️ NÍVEL";
     document.getElementById("toggleHoverEffectBtn").textContent = hoverEffectAtivo ? "📏 Régua" : "✖️ Régua";
