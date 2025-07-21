@@ -205,6 +205,7 @@ function inputCell(type, readOnly = false, value = "", isPasteTarget = false, cl
 
     // Event listener para mudanças de input
     input.addEventListener("input", async (e) => {
+        // Aplica a formatação (maiúsculas/minúsculas)
         if (e.target.closest('td').classList.contains('unidade-medida-col')) {
             e.target.value = e.target.value.toLowerCase();
         } else {
@@ -653,7 +654,6 @@ function preencherLinha(row, data) {
  * Atualiza o contador de duplicatas no header.
  * Ignora linhas completamente vazias e o destaque pode ser desativado via checkbox.
  * ATUALIZADO: Agora considera duplicata APENAS se CODIGO_MATERIAL e ITEM_COMPONENTE forem idênticos.
- * A linha que teve a duplicata IGNORADA no splash não será destacada.
  */
 function verificarDuplicatas() {
     const linhas = Array.from(tabela.rows);
@@ -1147,7 +1147,7 @@ document.getElementById("ignorarDuplicatasCheckbox").addEventListener("change", 
  * Listener para o checkbox "Marcar/Desmarcar Todos" no painel de controle.
  * Sincroniza o estado com o checkbox do cabeçalho da tabela e marca/desmarca todas as linhas.
  */
-document.getElementById("toggleAllCheckboxesHeader").addEventListener("change", (e) => {
+document.getElementById("toggleAllCheckboxesHeader").addEventListener("click", (e) => {
     const isChecked = e.target.checked;
     document.getElementById("toggleAllCheckboxes").checked = isChecked;
     tabela.querySelectorAll(".linha-selecao").forEach(checkbox => {
@@ -1159,7 +1159,7 @@ document.getElementById("toggleAllCheckboxesHeader").addEventListener("change", 
  * Listener para o checkbox "Marcar/Desmarcar Todos" no cabeçalho da tabela.
  * Sincroniza o estado com o checkbox do painel de controle e marca/desmarca todas as linhas.
  */
-document.getElementById("toggleAllCheckboxes").addEventListener("change", (e) => {
+document.getElementById("toggleAllCheckboxes").addEventListener("click", (e) => {
     const isChecked = e.target.checked;
     document.getElementById("toggleAllCheckboxesHeader").checked = isChecked;
     tabela.querySelectorAll(".linha-selecao").forEach(checkbox => {
@@ -1270,8 +1270,7 @@ async function handlePasteMultipleLines(event) {
         .filter(line => line !== '');
 
     if (lines.length === 0) {
-        Swal.fire("⚠️ Nenhum dado válido", "Nenhum dado foi colado ou as linhas estão vazias.", "warning");
-        return;
+        return; // Não exibe Swal.fire, apenas retorna
     }
 
     const possibleHeaders = new Set([
@@ -1286,8 +1285,7 @@ async function handlePasteMultipleLines(event) {
     const realLines = lines.slice(isHeader ? 1 : 0);
 
     if (realLines.length === 0) {
-        Swal.fire("⚠️ Nenhum dado colável", "Apenas cabeçalho foi colado ou não há dados para colar.", "warning");
-        return;
+        return; // Não exibe Swal.fire, apenas retorna
     }
 
     const activeElement = document.activeElement;
@@ -1296,38 +1294,20 @@ async function handlePasteMultipleLines(event) {
         (activeElement.tagName === 'INPUT' || activeElement.tagName === 'SELECT') &&
         activeElement.closest('#listaTabela')
     ) {
-        const confirmPaste = await Swal.fire({
-            title: `Colar ${realLines.length} item(s)?`,
-            html: `Você está prestes a colar <strong>${realLines.length}</strong> valor(es) a partir da célula selecionada. <br>Novas linhas serão criadas se necessário.`,
-            icon: 'question',
-            showCancelButton: true,
-            confirmButtonText: 'OK',
-            cancelButtonText: 'Cancelar'
-        });
+        // Remove a confirmação inicial ao colar
+        // const confirmPaste = await Swal.fire({...});
+        // if (!confirmPaste.isConfirmed) { event.preventDefault(); return; }
 
-        if (!confirmPaste.isConfirmed) {
-            event.preventDefault();
-            Swal.fire("❌ Colagem Cancelada", "A colagem foi interrompida.", "info");
-            return;
-        }
-
-        event.preventDefault();
+        event.preventDefault(); // Previne a ação de colagem padrão do navegador
 
         const targetRow = activeElement.closest('tr');
         const targetTd = activeElement.closest('td');
         const rowIndex = Array.from(tabela.rows).indexOf(targetRow);
         const columnIndex = Array.from(targetRow.children).indexOf(targetTd);
 
-        const isCodigoMaterialCol = targetTd.classList.contains('codigo-material-col');
-        const isItemComponenteCol = targetTd.classList.contains('item-componente-col');
-        const isQtdeMontagemCol = targetTd.classList.contains('qtde-montagem-col');
-
         let itemsPastedCount = 0;
-        let cancelledDuringProcessing = false;
 
         for (let i = 0; i < realLines.length; i++) {
-            if (cancelledDuringProcessing) break;
-
             let rowToProcess = tabela.rows[rowIndex + i];
             let isNewlyCreatedRow = false;
 
@@ -1341,84 +1321,68 @@ async function handlePasteMultipleLines(event) {
             if (!inputToUpdate) continue;
 
             let valueToPaste = realLines[i];
+            let currentMaterial = "";
+            let currentItemComponente = "";
+            let currentQtdeMontagem = "0";
 
-            // Aplica o valor colado ao campo correto
-            if (isCodigoMaterialCol) {
+            // Aplica o valor colado ao campo correto, COM A FORMATAÇÃO (UPPERCASE/LOWERCASE)
+            // Esta é a chave para evitar a duplicação do texto no input de material.
+            if (targetTd.classList.contains('codigo-material-col')) {
                 inputToUpdate.value = valueToPaste.toUpperCase();
-            } else if (isItemComponenteCol) {
+            } else if (targetTd.classList.contains('item-componente-col')) {
                 inputToUpdate.value = valueToPaste.toUpperCase();
-            } else if (isQtdeMontagemCol) {
+            } else if (targetTd.classList.contains('qtde-montagem-col')) {
                 inputToUpdate.value = valueToPaste.replace(',', '.');
+            } else if (targetTd.classList.contains('unidade-medida-col')) {
+                inputToUpdate.value = valueToPaste.toLowerCase();
             } else {
-                if (inputToUpdate.closest('td').classList.contains('unidade-medida-col')) {
-                    inputToUpdate.value = valueToPaste.toLowerCase();
-                } else if (inputToUpdate.closest('td').classList.contains('nivel-col')) {
-                    inputToUpdate.value = valueToPaste.trim();
-                } else {
-                    inputToUpdate.value = valueToPaste.toUpperCase();
-                }
-                inputToUpdate.dispatchEvent(new Event('input', { bubbles: true }));
-                itemsPastedCount++;
-                continue;
+                inputToUpdate.value = valueToPaste.toUpperCase(); // Para outros campos de texto
             }
 
+            // Dispara o evento 'input' para que outras lógicas (LINHA, etc.) sejam atualizadas
+            inputToUpdate.dispatchEvent(new Event('input', { bubbles: true }));
+
+            // Obter os dados da linha ATUALIZADOS APÓS A COLAGEM para verificação de duplicidade
             const updatedRowData = getLinhaData(rowToProcess);
-            let currentMaterial = updatedRowData.CODIGO_MATERIAL;
-            let currentItemComponente = updatedRowData.ITEM_COMPONENTE;
-            let currentQtdeMontagem = updatedRowData.QTDE_MONTAGEM;
+            currentMaterial = updatedRowData.CODIGO_MATERIAL;
+            currentItemComponente = updatedRowData.ITEM_COMPONENTE;
+            currentQtdeMontagem = updatedRowData.QTDE_MONTAGEM;
 
-
-            // Dispara o alerta de duplicata se CODIGO_MATERIAL e ITEM_COMPONENTE estiverem preenchidos
+            // Lógica de duplicata ao colar (sem splash, apenas soma se for o caso)
             if (currentMaterial && currentItemComponente) {
                 const existingDuplicateRow = encontrarLinhaDuplicada(
                     currentMaterial,
                     currentItemComponente,
-                    rowToProcess
+                    rowToProcess // Passa a própria linha para ignorá-la na busca por duplicatas
                 );
 
                 if (existingDuplicateRow) {
-                    const tempNewData = {
-                        CODIGO_MATERIAL: currentMaterial,
-                        ITEM_COMPONENTE: currentItemComponente,
-                        QTDE_MONTAGEM: currentQtdeMontagem
-                    };
-                    const action = await mostrarAlertaDuplicata(tempNewData, existingDuplicateRow);
-
-                    // --- Remova quaisquer efeitos de opacidade/destaque temporário após a escolha do SweetAlert ---
-                    resetDuplicateSearchState(); // Limpa o estado de busca e destaques.
-
-                    if (action === 'ignorar') {
-                        inputToUpdate.dispatchEvent(new Event('input', { bubbles: true }));
-                        itemsPastedCount++;
-                    } else if (action === 'cancelar') {
-                        inputToUpdate.value = "";
-                        const otherMaterialInput = rowToProcess.querySelector(".codigo-material-col input");
-                        const otherItemInput = rowToProcess.querySelector(".item-componente-col input");
-                        if (otherMaterialInput && otherMaterialInput !== inputToUpdate) otherMaterialInput.value = "";
-                        if (otherItemInput && otherItemInput !== inputToUpdate) otherItemInput.value = "";
-                        const qtdeInput = rowToProcess.querySelector(".qtde-montagem-col input");
-                        if (qtdeInput) qtdeInput.value = "";
-
-                        if (isNewlyCreatedRow) {
-                             rowToProcess.remove();
-                        }
-                        cancelledDuringProcessing = true;
-                        Swal.fire("❌ Colagem Interrompida", "Operação cancelada pelo usuário.", "info");
-                        break;
+                    // Se for uma duplicata, soma a quantidade e remove a linha recém-colada.
+                    const qtdeNova = parseFloat(currentQtdeMontagem) || 0;
+                    const existingQtdeInput = existingDuplicateRow.querySelector(".qtde-montagem-col input");
+                    if (existingQtdeInput) {
+                        const currentQtde = parseFloat(existingQtdeInput.value.replace(',', '.')) || 0;
+                        existingQtdeInput.value = (currentQtde + qtdeNova).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+                        existingQtdeInput.dispatchEvent(new Event('input', { bubbles: true })); // Dispara input na linha existente
                     }
+                    if (rowToProcess.parentNode) {
+                        rowToProcess.remove(); // Remove a linha recém-colada
+                    }
+                    itemsPastedCount++; // Conta como processado/somado
+                    console.log(`[Colar] Duplicata encontrada para ${currentMaterial}|${currentItemComponente}. Quantidade somada à linha existente.`);
                 } else {
-                    inputToUpdate.dispatchEvent(new Event('input', { bubbles: true }));
+                    // Não é duplicata, a linha permanece normalmente.
                     itemsPastedCount++;
                 }
             } else {
-                inputToUpdate.dispatchEvent(new Event('input', { bubbles: true }));
+                // Se não tem material e componente completos, apenas conta a linha colada.
                 itemsPastedCount++;
             }
         }
-        acaoImportouOuAdicionouLinhas();
-        if (!cancelledDuringProcessing) {
-            Swal.fire("✅ Colagem concluída!", `Foram colados ${itemsPastedCount} item(s) com sucesso.`, "success");
-        }
+        acaoImportouOuAdicionouLinhas(); // Atualiza SEQ, LINHA, e Duplicatas após colar
+
+        // Nenhuma mensagem final de sucesso/cancelamento. A operação é silenciosa.
+        // Swal.fire("✅ Colagem concluída!", `Foram colados ${itemsPastedCount} item(s) com sucesso.`, "success");
     } else {
         console.log("Colagem em elemento não gerenciado pela tabela, permitindo padrão.");
     }
