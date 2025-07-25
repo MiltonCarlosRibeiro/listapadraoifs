@@ -3,6 +3,7 @@
  * @description Script principal para a aplicação de Lista Técnica IFS.
  * Gerencia a interação com a tabela, importação/exportação de Excel,
  * autopreenchimento de colunas, e funcionalidades de UI.
+ * @version 2.0 - Adicionado salvamento automático e restauração de sessão.
  */
 
 /**
@@ -181,8 +182,6 @@ async function mostrarAlertaDuplicata(newData, existingRow) {
     return 'cancelar'; // Default para fechar fora ou por outras razões
 }
 
-// --- FIM DAS NOVAS FUNÇÕES PARA DUPLICATAS ---
-
 
 /**
  * Cria um elemento <td> contendo um <input> ou <select>.
@@ -218,8 +217,6 @@ function inputCell(type, readOnly = false, value = "", isPasteTarget = false, cl
         const isCodigoMaterialCol = e.target.closest('td').classList.contains('codigo-material-col');
         const isItemComponenteCol = e.target.closest('td').classList.contains('item-componente-col');
 
-        // Dispara o alerta de duplicata se CODIGO_MATERIAL e ITEM_COMPONENTE estiverem preenchidos
-        // E SE a mudança ocorreu em CODIGO_MATERIAL ou ITEM_COMPONENTE
         if (currentData.CODIGO_MATERIAL && currentData.ITEM_COMPONENTE &&
             (isCodigoMaterialCol || isItemComponenteCol)) {
 
@@ -232,13 +229,12 @@ function inputCell(type, readOnly = false, value = "", isPasteTarget = false, cl
             if (existingDuplicateRow) {
                 const action = await mostrarAlertaDuplicata(currentData, existingDuplicateRow);
 
-                // --- Remova quaisquer efeitos de opacidade/destaque temporário após a escolha do SweetAlert ---
-                resetDuplicateSearchState(); // Chama a função para limpar o estado de busca e destaques.
+                resetDuplicateSearchState();
 
                 if (action === 'ignorar') {
                     currentRow.classList.remove("no-highlight-on-ignore");
                     Swal.fire("ℹ️ Duplicata Ignorada", "A linha será inserida normalmente e destacada.", "info");
-                } else if (action === 'cancelar') { // Seu "Não Adicionar" (agora botão Cancelar)
+                } else if (action === 'cancelar') {
                     e.target.value = "";
                     const otherMaterialInput = currentRow.querySelector(".codigo-material-col input");
                     const otherItemInput = currentRow.querySelector(".item-componente-col input");
@@ -246,9 +242,9 @@ function inputCell(type, readOnly = false, value = "", isPasteTarget = false, cl
 
                     if (otherMaterialInput && otherMaterialInput !== e.target) otherMaterialInput.value = "";
                     if (otherItemInput && otherItemInput !== e.target) otherItemInput.value = "";
-                    if (qtdeInput) qtdeInput.value = ""; // Limpa quantidade também, se existir e não for o input atual
+                    if (qtdeInput) qtdeInput.value = "";
                     currentRow.classList.remove("highlight-duplicate");
-                    currentRow.classList.add("no-highlight-on-ignore"); // Impede que ela seja roxa.
+                    currentRow.classList.add("no-highlight-on-ignore");
                     Swal.fire("❌ Entrada Cancelada", "Os campos foram limpos para evitar duplicata.", "info");
                 }
             }
@@ -262,19 +258,15 @@ function inputCell(type, readOnly = false, value = "", isPasteTarget = false, cl
         atualizarColunaLinha();
     });
 
-    // --- LISTENER: Desativa o foco e opacidade ao clicar em qualquer input/select de uma linha destacada ---
     input.addEventListener("click", (e) => {
         const tbodyElement = document.getElementById("listaTabela").querySelector('tbody');
         const clickedRow = e.target.closest('tr');
 
-        // Verifica se o tbody está com o fade ativo OU se a linha clicada é uma linha focada/temporariamente destacada
         if (tbodyElement.classList.contains("table-faded") || clickedRow.classList.contains('highlight-focused-item')) {
-            resetDuplicateSearchState(); // Limpa o estado de busca e destaques ao clicar.
+            resetDuplicateSearchState();
         }
     });
 
-
-    // Navegação com Enter (mantido)
     input.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') {
             e.preventDefault();
@@ -309,13 +301,11 @@ function inputCell(type, readOnly = false, value = "", isPasteTarget = false, cl
         }
     });
 
-    // Funcionalidade de pintura/demarcação de célula (mantida)
     input.addEventListener("click", (e) => {
-        if (!demarcarLinha) { // Apenas se o modo "Demarcar linha" NÃO estiver ativo
+        if (!demarcarLinha) {
             if (removerDemarcacao) {
-                e.target.closest("td").style.backgroundColor = ""; // Remove cor
+                e.target.closest("td").style.backgroundColor = "";
             } else if (corSelecionada) {
-                // Alterna a cor: se já tem a cor selecionada, remove; senão, aplica
                 if (e.target.closest("td").style.backgroundColor === corSelecionada) {
                     e.target.closest("td").style.backgroundColor = "";
                 } else {
@@ -350,15 +340,13 @@ function selectCell(options = [], selected = "", className = "") {
         select.appendChild(option);
     });
 
-    // Event listener para mudanças no select
     select.addEventListener("change", () => {
-        verificarDuplicatas(); // Verifica duplicatas a cada alteração
-        atualizarColunaLinha(); // Sempre atualiza LINHA se campos relevantes mudam
+        verificarDuplicatas();
+        atualizarColunaLinha();
     });
 
-    // Funcionalidade de pintura/demarcação de célula (mantida)
     select.addEventListener("click", (e) => {
-        if (!demarcarLinha) { // Apenas se o modo "Demarcar linha" NÃO estiver ativo
+        if (!demarcarLinha) {
             if (removerDemarcacao) {
                 e.target.closest("td").style.backgroundColor = "";
             } else if (corSelecionada) {
@@ -371,7 +359,6 @@ function selectCell(options = [], selected = "", className = "") {
         }
     });
 
-    // Navegação com Enter (mantido)
     select.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') {
             e.preventDefault();
@@ -418,7 +405,6 @@ function selectCell(options = [], selected = "", className = "") {
 function criarLinha(v = {}) {
     const row = document.createElement("tr");
 
-    // Célula do checkbox de seleção
     const checkboxTd = document.createElement("td");
     const checkbox = document.createElement("input");
     checkbox.type = "checkbox";
@@ -426,16 +412,13 @@ function criarLinha(v = {}) {
     checkboxTd.appendChild(checkbox);
     row.appendChild(checkboxTd);
 
-    // Célula para a sequência (SEQ) - preenchida via JS
     const seqTd = document.createElement("td");
     seqTd.classList.add("seq-col");
     row.appendChild(seqTd);
 
-    // Célula para NÍVEL
     const nivelCell = inputCell("text", false, v.NIVEL || "", true, "nivel-col");
     row.appendChild(nivelCell);
 
-    // Event listener para demarcação/pintura de LINHA inteira
     row.addEventListener("click", (e) => {
         if (e.target.tagName.match(/INPUT|SELECT|BUTTON/)) return;
         if (demarcarLinha) {
@@ -451,7 +434,6 @@ function criarLinha(v = {}) {
         }
     });
 
-    // Adiciona as demais células utilizando as funções helper
     row.appendChild(selectCell(siteValores, v.SITE || "1"));
     row.appendChild(selectCell(alternativas, v.ALTERNATIVA || "*"));
     row.appendChild(inputCell("text", false, v.CODIGO_MATERIAL || "", true, "codigo-material-col"));
@@ -503,19 +485,7 @@ function atualizarSequencias() {
     });
 }
 
-/**
- * Preenche automaticamente a coluna "LINHA" baseando-se no `CODIGO_MATERIAL` e `ITEM_COMPONENTE`.
- *
- * Regras:
- * 1. Se o `ITEM_COMPONENTE` de UMA LINHA começar com "MP1-", APENAS ESSA LINHA terá a "LINHA" definida como "10".
- * Esta regra tem prioridade máxima. O sequenciamento das demais linhas (mesmo do mesmo CODIGO_MATERIAL)
- * NÃO É AFETADO ou reiniciado por uma linha "MP1-".
- * 2. Para TODAS AS OUTRAS LINHAS (cujo ITEM_COMPONENTE NÃO começa com "MP1-"):
- * a. Se um grupo de `CODIGO_MATERIAL` contiver qualquer `ITEM_COMPONENTE` que comece com "MP-" (E NÃO "MP1-"),
- * todas as linhas desse grupo (exceto as "MP1-") terão a "LINHA" definida como "10".
- * b. Caso contrário, a "LINHA" será uma sequência incremental (10, 20, 30...) para aquele `CODIGO_MATERIAL`.
- * O sequenciamento continua de onde parou para o mesmo CODIGO_MATERIAL, ou reinicia em 10 se o CODIGO_MATERIAL mudar.
- */
+
 function atualizarColunaLinha() {
     const rows = Array.from(tabela.rows);
     const groupedData = new Map();
@@ -649,29 +619,23 @@ function preencherLinha(row, data) {
     cells[11].querySelector("select").value = data.FATOR_SUCATA || "0";
 }
 
-/**
- * Verifica e destaca linhas que contêm dados duplicados na tabela.
- * Atualiza o contador de duplicatas no header.
- * Ignora linhas completamente vazias e o destaque pode ser desativado via checkbox.
- * ATUALIZADO: Agora considera duplicata APENAS se CODIGO_MATERIAL e ITEM_COMPONENTE forem idênticos.
- */
+
 function verificarDuplicatas() {
     const linhas = Array.from(tabela.rows);
 
-    // Remove todas as classes de destaque e a classe temporária de "não destaque"
     linhas.forEach(row => {
         row.classList.remove("highlight-duplicate");
         row.classList.remove("no-highlight-on-ignore");
     });
 
     if (ignorarDuplicatas) {
-        document.getElementById("duplicateCountDisplay").textContent = ""; // Limpa o contador se ignorar
-        resetDuplicateSearchState(); // Garante que o modo de busca seja desativado
+        document.getElementById("duplicateCountDisplay").textContent = "";
+        resetDuplicateSearchState();
         return;
     }
 
     const combinaçõesDetectadas = new Map();
-    const tempFoundDuplicates = []; // Usa um array temporário para construir a lista
+    const tempFoundDuplicates = [];
 
     linhas.forEach((tr) => {
         const data = getLinhaData(tr);
@@ -689,29 +653,27 @@ function verificarDuplicatas() {
 
     let duplicateCount = 0;
     for (const [hash, rows] of combinaçõesDetectadas) {
-        if (rows.length > 1) { // Se há mais de uma linha com essa combinação, são duplicatas
+        if (rows.length > 1) {
             rows.forEach(row => {
                 if (!row.classList.contains("no-highlight-on-ignore")) {
                     row.classList.add("highlight-duplicate");
                 }
             });
-            // Adiciona todas as linhas duplicadas ao array temporário
             tempFoundDuplicates.push(...rows);
-            duplicateCount += rows.length; // Conta cada ocorrência duplicada
+            duplicateCount += rows.length;
         }
     }
-    // Garante que foundDuplicates contenha apenas as duplicatas ativas (roxo claro)
     foundDuplicates = tempFoundDuplicates.filter(row => row.classList.contains("highlight-duplicate"));
-    foundDuplicates.sort((a, b) => Array.from(tabela.rows).indexOf(a) - Array.from(tabela.rows).indexOf(b)); // Ordena por posição na tabela
+    foundDuplicates.sort((a, b) => Array.from(tabela.rows).indexOf(a) - Array.from(tabela.rows).indexOf(b));
 
     const displayElement = document.getElementById("duplicateCountDisplay");
-    if (foundDuplicates.length > 0) { // Se o length for 0, não há itens duplicados para buscar
+    if (foundDuplicates.length > 0) {
         displayElement.textContent = `⚠️ ${foundDuplicates.length} duplicata(s)`;
     } else {
         displayElement.textContent = "";
     }
 
-    currentDuplicateIndex = -1; // Reseta o índice ao re-verificar duplicatas
+    currentDuplicateIndex = -1;
 }
 
 /**
@@ -784,12 +746,6 @@ function exportarParaExcel() {
     Swal.fire("✅ Exportado!", `A lista foi exportada para 'Lista_Tecnica_${dateStr}.xlsx'.`, "success");
 
 }
-
-/**
- * Carrega dados de um arquivo Excel selecionado pelo usuário para a tabela.
- * Mapeia as colunas do Excel dinamicamente pelos seus cabeçalhos.
- * @param {HTMLInputElement} inputElement - O elemento <input type="file"> que disparou o evento.
- */
 
 function carregarExcel(inputElement) {
     const file = inputElement.files[0];
@@ -864,7 +820,6 @@ function carregarExcel(inputElement) {
 /**
  * Função unificada para disparar todas as atualizações necessárias
  * após ações que modificam o conteúdo ou a estrutura das linhas da tabela.
- * Inclui: atualização de sequências, autopreenchimento de LINHA, e verificação de duplicatas.
  */
 function acaoImportouOuAdicionouLinhas() {
     atualizarSequencias();
@@ -874,10 +829,6 @@ function acaoImportouOuAdicionouLinhas() {
 
 // --- Event Listeners para Botões da Barra de Ferramentas ---
 
-/**
- * Listener para o botão "Criar Nova Lista".
- * Limpa a tabela e adiciona 10 linhas vazias.
- */
 document.getElementById("criarListaBtn").addEventListener("click", () => {
     tabela.innerHTML = "";
     criar10Linhas();
@@ -885,26 +836,14 @@ document.getElementById("criarListaBtn").addEventListener("click", () => {
     Swal.fire("✅ Lista Criada!", "10 novas linhas foram adicionadas.", "success");
 });
 
-/**
- * Listener para o botão "Continuar Lista".
- * Adiciona 10 linhas vazias ao final da tabela existente.
- */
 document.getElementById("continuarListaBtn").addEventListener("click", () => {
     criar10Linhas();
     acaoImportouOuAdicionouLinhas();
     Swal.fire("➕ Adicionado", "10 novas linhas foram inseridas.", "success");
 });
 
-/**
- * Listener para o botão "Salvar Lista".
- * Chama a função para exportar a tabela para Excel.
- */
 document.getElementById("salvarListaBtn").addEventListener("click", exportarParaExcel);
 
-/**
- * Listener para o botão "Copiar Selecionado".
- * Copia os dados das linhas selecionadas para um cache.
- */
 document.getElementById("copiarSelecionadoBtn").addEventListener("click", () => {
     const linhasSelecionadas = Array.from(tabela.querySelectorAll(".linha-selecao:checked")).map(cb => cb.closest("tr"));
     if (linhasSelecionadas.length === 0) {
@@ -915,13 +854,6 @@ document.getElementById("copiarSelecionadoBtn").addEventListener("click", () => 
     Swal.fire("✅ Copiado!", `${cacheCopiado.length} linhas copiadas.`, "success");
 });
 
-/**
- * Listener para o botão "Colar".
- * Cola os dados do cache em novas linhas ou sobrescreve linhas selecionadas.
- * ATUALIZADO: NÃO USA A NOVA LÓGICA DE DUPLICATAS COM SPLASH.
- * A lógica de DUPLICATAS COM SPLASH é implementada no `handlePasteMultipleLines` para colagem de texto em células.
- * Este botão "Colar" é para colar LINHAS COPIADAS (de `cacheCopiado`).
- */
 document.getElementById("colarBtn").addEventListener("click", () => {
     if (cacheCopiado.length === 0) {
         Swal.fire("ℹ️ Nada para Colar", "Nenhum dado copiado.", "info");
@@ -945,10 +877,6 @@ document.getElementById("colarBtn").addEventListener("click", () => {
     Swal.fire("✅ Colado!", `${cacheCopiado.length} linhas coladas.`, "success");
 });
 
-/**
- * Listener para o botão "Deletar Selecionados".
- * Remove as linhas da tabela que estão marcadas com o checkbox.
- */
 document.getElementById("deletarSelecionadosBtn").addEventListener("click", () => {
     const linhasParaDeletar = Array.from(tabela.querySelectorAll(".linha-selecao:checked")).map(cb => cb.closest("tr"));
     if (linhasParaDeletar.length === 0) {
@@ -967,17 +895,13 @@ document.getElementById("deletarSelecionadosBtn").addEventListener("click", () =
         cancelButtonText: 'Cancelar'
     }).then((result) => {
         if (result.isConfirmed) {
-            linhasParaDeletar.forEach(row => row.remove()); // Remove as linhas
-            acaoImportouOuAdicionouLinhas(); // Atualiza SEQ, LINHA, e Duplicatas
+            linhasParaDeletar.forEach(row => row.remove());
+            acaoImportouOuAdicionouLinhas();
             Swal.fire('Deletado!', `${linhasParaDeletar.length} linha(s) foram deletadas.`, 'success');
         }
     });
 });
 
-/**
- * Listener para o botão "Inserir Acima".
- * Insere uma nova linha vazia acima da primeira linha selecionada.
- */
 document.getElementById("inserirAcimaBtn").addEventListener("click", () => {
     const linhasSelecionadas = Array.from(tabela.querySelectorAll(".linha-selecao:checked")).map(cb => cb.closest("tr"));
     if (linhasSelecionadas.length === 0) {
@@ -991,10 +915,6 @@ document.getElementById("inserirAcimaBtn").addEventListener("click", () => {
     Swal.fire("⬆️ Inserido", "Uma nova linha foi inserida acima da seleção.", "success");
 });
 
-/**
- * Listener para o botão "Inserir Abaixo".
- * Insere uma nova linha vazia abaixo da última linha selecionada.
- */
 document.getElementById("inserirAbaixoBtn").addEventListener("click", () => {
     const linhasSelecionadas = Array.from(tabela.querySelectorAll(".linha-selecao:checked")).map(cb => cb.closest("tr"));
     if (linhasSelecionadas.length === 0) {
@@ -1012,30 +932,18 @@ document.getElementById("inserirAbaixoBtn").addEventListener("click", () => {
     Swal.fire("⬇️ Inserido", "Uma nova linha foi inserida abaixo da seleção.", "success");
 });
 
-/**
- * Listener para o botão "Alternar SEQ".
- * Alterna a visibilidade da coluna "SEQ".
- */
 document.getElementById("toggleSeqBtn").addEventListener("click", () => {
     seqAtivo = !seqAtivo;
     document.getElementById("listaTabela").classList.toggle("seq-col-hidden", !seqAtivo);
     document.getElementById("toggleSeqBtn").innerHTML = seqAtivo ? '<span class="material-symbols-outlined">visibility</span> SEQ' : '<span class="material-symbols-outlined">visibility_off</span> SEQ';
 });
 
-/**
- * Listener para o botão "Alternar NÍVEL".
- * Alterna a visibilidade da coluna "NÍVEL".
- */
 document.getElementById("toggleNivelColBtn").addEventListener("click", () => {
     nivelColVisivel = !nivelColVisivel;
     document.getElementById("listaTabela").classList.toggle("nivel-col-hidden", !nivelColVisivel);
     document.getElementById("toggleNivelColBtn").innerHTML = nivelColVisivel ? '<span class="material-symbols-outlined">layers</span> NÍVEL' : '<span class="material-symbols-outlined">layers_clear</span> NÍVEL';
 });
 
-/**
- * Listener para o botão "Alternar Régua".
- * Alterna o efeito de destaque de linha ao passar o mouse (régua).
- */
 document.getElementById("toggleHoverEffectBtn").addEventListener("click", () => {
     hoverEffectAtivo = !hoverEffectAtivo;
     const tableElement = document.getElementById("listaTabela");
@@ -1044,12 +952,6 @@ document.getElementById("toggleHoverEffectBtn").addEventListener("click", () => 
     document.getElementById("toggleHoverEffectBtn").innerHTML = hoverEffectAtivo ? '<span class="material-symbols-outlined">straighten</span> Régua' : '<span class="material-symbols-outlined">format_line_spacing</span> Régua';
 });
 
-// --- Event Listeners para Controles de Pintura e Destaque ---
-
-/**
- * Listener para o botão "Limpar Seleção de Cor".
- * Reseta a cor selecionada e os modos de demarcação.
- */
 document.getElementById("clearPaintBtn").addEventListener("click", () => {
     corSelecionada = "";
     demarcarLinha = false;
@@ -1059,32 +961,18 @@ document.getElementById("clearPaintBtn").addEventListener("click", () => {
     Swal.fire("🎨 Limpeza", "Seleção de cor e modos de demarcação limpos.", "info");
 });
 
-/**
- * Listener para o checkbox "Demarcar linha".
- * Ativa/desativa o modo de demarcação de linha inteira.
- */
 document.getElementById("demarcarLinhaCheckbox").addEventListener("change", (e) => {
     demarcarLinha = e.target.checked;
     if (demarcarLinha) removerDemarcacao = false;
     document.getElementById("removerDemarcacaoCheckbox").checked = false;
 });
 
-/**
- * Listener para o checkbox "Remover demarcação".
- * Ativa/desativa o modo de remoção de cor ao clicar.
- */
 document.getElementById("removerDemarcacaoCheckbox").addEventListener("change", (e) => {
     removerDemarcacao = e.target.checked;
     if (removerDemarcacao) demarcarLinha = false;
     document.getElementById("demarcarLinhaCheckbox").checked = false;
 });
 
-// --- Geração Dinâmica de Botões de Cor de Nível ---
-
-/**
- * Cria dinamicamente botões para seleção de cores de Nível.
- * Cada botão define `corSelecionada` para a cor correspondente.
- */
 const nivelColorButtonsDiv = document.getElementById("nivelColorButtons");
 nivelColors.forEach((color, index) => {
     const button = document.createElement("button");
@@ -1100,10 +988,6 @@ nivelColors.forEach((color, index) => {
     nivelColorButtonsDiv.appendChild(button);
 });
 
-/**
- * Adiciona listeners aos botões de cores de atenção (predefinidos no HTML).
- * Define `corSelecionada` para a cor do botão clicado.
- */
 document.querySelectorAll("#attentionColorButtons .paint-btn").forEach(button => {
     button.addEventListener("click", (e) => {
         corSelecionada = e.target.dataset.color;
@@ -1111,12 +995,6 @@ document.querySelectorAll("#attentionColorButtons .paint-btn").forEach(button =>
     });
 });
 
-/**
- * Função utilitária para determinar uma cor de texto de contraste (preto ou branco)
- * para um dado fundo hexadecimal, baseando-se no valor de luminância.
- * @param {string} hexcolor - A cor hexadecimal do fundo (e.g., "#RRGGBB").
- * @returns {string} "black" ou "white".
- */
 function getContrastColor(hexcolor) {
     if (!hexcolor.startsWith("#")) {
         return "black";
@@ -1132,21 +1010,11 @@ function getContrastColor(hexcolor) {
     return (hsp > 127.5) ? "black" : "white";
 }
 
-/**
- * Listener para o checkbox "Ignorar destaque de duplicatas".
- * Ativa/desativa a funcionalidade de destaque de duplicatas e atualiza a tabela.
- */
 document.getElementById("ignorarDuplicatasCheckbox").addEventListener("change", (e) => {
     ignorarDuplicatas = e.target.checked;
     verificarDuplicatas();
 });
 
-// --- Sincronização de Checkboxes de Seleção Total ---
-
-/**
- * Listener para o checkbox "Marcar/Desmarcar Todos" no painel de controle.
- * Sincroniza o estado com o checkbox do cabeçalho da tabela e marca/desmarca todas as linhas.
- */
 document.getElementById("toggleAllCheckboxesHeader").addEventListener("click", (e) => {
     const isChecked = e.target.checked;
     document.getElementById("toggleAllCheckboxes").checked = isChecked;
@@ -1155,10 +1023,6 @@ document.getElementById("toggleAllCheckboxesHeader").addEventListener("click", (
     });
 });
 
-/**
- * Listener para o checkbox "Marcar/Desmarcar Todos" no cabeçalho da tabela.
- * Sincroniza o estado com o checkbox do painel de controle e marca/desmarca todas as linhas.
- */
 document.getElementById("toggleAllCheckboxes").addEventListener("click", (e) => {
     const isChecked = e.target.checked;
     document.getElementById("toggleAllCheckboxesHeader").checked = isChecked;
@@ -1167,24 +1031,14 @@ document.getElementById("toggleAllCheckboxes").addEventListener("click", (e) => 
     });
 });
 
-// --- Listener para Input de Arquivo (Importação) ---
-
-/**
- * Listener para o input de arquivo (botão "Importar Lista").
- * Dispara a função `carregarExcel` quando um arquivo é selecionado.
- */
 document.getElementById("inputFile").addEventListener("change", function (e) {
     carregarExcel(e.target);
     e.target.value = '';
 });
 
-
-// --- Lógica de Busca e Navegação de Duplicatas por Botão e Teclado ---
-
 document.getElementById("findDuplicatesBtn").addEventListener("click", () => {
-    resetDuplicateSearchState(); // Limpa qualquer estado anterior
+    resetDuplicateSearchState();
 
-    // Filtra apenas as linhas que SÃO destacadas como duplicatas (as roxas)
     const currentDuplicates = Array.from(tabela.querySelectorAll('tr.highlight-duplicate'));
 
     if (currentDuplicates.length === 0) {
@@ -1192,74 +1046,50 @@ document.getElementById("findDuplicatesBtn").addEventListener("click", () => {
         return;
     }
 
-    // Ordena as duplicatas pela posição na tabela para garantir a ordem de navegação
     foundDuplicates = currentDuplicates.sort((a, b) => {
         return Array.from(tabela.rows).indexOf(a) - Array.from(tabela.rows).indexOf(b);
     });
 
-    currentDuplicateIndex = 0; // Começa pelo primeiro item duplicado
-
-    // Rola para o primeiro item e aplica os destaques
+    currentDuplicateIndex = 0;
     focusOnDuplicate(foundDuplicates[currentDuplicateIndex]);
 });
 
-/**
- * Aplica os efeitos visuais de foco a uma linha duplicada.
- * @param {HTMLTableRowElement} rowToFocus - A linha duplicada a ser focada.
- */
 function focusOnDuplicate(rowToFocus) {
-    if (!rowToFocus) return; // Sai se a linha não existir
+    if (!rowToFocus) return;
 
     const tbodyElement = document.getElementById("listaTabela").querySelector('tbody');
-
-    // Remove o destaque de foco de TODAS as linhas antes de aplicar no novo item
     tabela.querySelectorAll('tr').forEach(row => {
         row.classList.remove('highlight-focused-item');
         row.classList.remove('temp-highlight-found');
     });
 
-    // Aplica o fade ao tbody para escurecer as outras linhas
     tbodyElement.classList.add("table-faded");
-
-    // Aplica destaque na linha focada
     rowToFocus.classList.add('highlight-focused-item');
-    rowToFocus.classList.add('highlight-duplicate'); // Garante que continue roxa
-    rowToFocus.classList.add('temp-highlight-found'); // Efeito de piscar
-
-    rowToFocus.scrollIntoView({ behavior: 'smooth', block: 'center' }); // Rola suavemente
+    rowToFocus.classList.add('highlight-duplicate');
+    rowToFocus.classList.add('temp-highlight-found');
+    rowToFocus.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 
-// --- Listener GLOBAL para Teclas ENTER e ESC (para navegação de duplicatas) ---
 document.addEventListener('keydown', (e) => {
     const tbodyElement = document.getElementById("listaTabela").querySelector('tbody');
-
-    // Só ativa a navegação por teclado se houver duplicatas encontradas e a tabela estiver em modo "faded"
     if (foundDuplicates.length > 0 && tbodyElement.classList.contains("table-faded")) {
         if (e.key === 'Enter') {
-            e.preventDefault(); // Evita o comportamento padrão do Enter (como focar no próximo input)
+            e.preventDefault();
             currentDuplicateIndex++;
             if (currentDuplicateIndex >= foundDuplicates.length) {
-                currentDuplicateIndex = 0; // Volta para o início da lista se chegar ao final
+                currentDuplicateIndex = 0;
             }
             focusOnDuplicate(foundDuplicates[currentDuplicateIndex]);
         } else if (e.key === 'Escape') {
-            e.preventDefault(); // Evita o comportamento padrão do Esc
-            resetDuplicateSearchState(); // Sai do modo de busca de duplicatas
+            e.preventDefault();
+            resetDuplicateSearchState();
             Swal.fire("✅ Busca Encerrada", "O modo de busca de duplicatas foi desativado.", "info");
         }
     }
 });
 
-
-// --- COLAGEM MASSA COM CONFIRMAÇÃO ---
-// Adiciona o listener de paste ao document para pegar colagens em qualquer lugar
 document.addEventListener('paste', handlePasteMultipleLines);
 
-/**
- * Função para colar múltiplos valores em qualquer campo da tabela (com suporte para criar linhas e ignorar cabeçalho).
- * Ativada por um evento 'paste' no documento.
- * @param {ClipboardEvent} event - O evento de colagem.
- */
 async function handlePasteMultipleLines(event) {
     const pastedText = (event.clipboardData || window.clipboardData).getData('text');
     if (!pastedText) return;
@@ -1269,150 +1099,253 @@ async function handlePasteMultipleLines(event) {
         .map(line => line.trim())
         .filter(line => line !== '');
 
-    if (lines.length === 0) {
-        return; // Não exibe Swal.fire, apenas retorna
-    }
+    if (lines.length === 0) return;
 
     const possibleHeaders = new Set([
         'seq', 'codigo_material', 'codigo', 'qtd', 'qtde', 'un', 'unidade_de_medida', 'unidade_medida', 'unidade', 'descricao', 'item_componente', 'item', 'linha', 'nivel', 'site', 'alternativa', 'tipo_estrutura', 'fator_sucata'
     ]);
-
     const normalizeHeader = str => str.normalize('NFD').replace(/[\u0300-\u036f\s_]/g, "").toLowerCase();
     const firstLineNormalized = normalizeHeader(lines[0]);
-
     const isHeader = Array.from(possibleHeaders).some(header => firstLineNormalized.startsWith(normalizeHeader(header)));
-
     const realLines = lines.slice(isHeader ? 1 : 0);
 
-    if (realLines.length === 0) {
-        return; // Não exibe Swal.fire, apenas retorna
-    }
+    if (realLines.length === 0) return;
 
     const activeElement = document.activeElement;
-    if (
-        activeElement &&
-        (activeElement.tagName === 'INPUT' || activeElement.tagName === 'SELECT') &&
-        activeElement.closest('#listaTabela')
-    ) {
-        // Remove a confirmação inicial ao colar
-        // const confirmPaste = await Swal.fire({...});
-        // if (!confirmPaste.isConfirmed) { event.preventDefault(); return; }
-
-        event.preventDefault(); // Previne a ação de colagem padrão do navegador
+    if (activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'SELECT') && activeElement.closest('#listaTabela')) {
+        event.preventDefault();
 
         const targetRow = activeElement.closest('tr');
         const targetTd = activeElement.closest('td');
         const rowIndex = Array.from(tabela.rows).indexOf(targetRow);
         const columnIndex = Array.from(targetRow.children).indexOf(targetTd);
-
         let itemsPastedCount = 0;
 
         for (let i = 0; i < realLines.length; i++) {
             let rowToProcess = tabela.rows[rowIndex + i];
-            let isNewlyCreatedRow = false;
-
             if (!rowToProcess) {
                 rowToProcess = criarLinhaVazia();
                 tabela.appendChild(rowToProcess);
-                isNewlyCreatedRow = true;
             }
 
             const inputToUpdate = rowToProcess.children[columnIndex]?.querySelector('input, select');
             if (!inputToUpdate) continue;
 
             let valueToPaste = realLines[i];
-            let currentMaterial = "";
-            let currentItemComponente = "";
-            let currentQtdeMontagem = "0";
-
-            // Aplica o valor colado ao campo correto, COM A FORMATAÇÃO (UPPERCASE/LOWERCASE)
-            // Esta é a chave para evitar a duplicação do texto no input de material.
-            if (targetTd.classList.contains('codigo-material-col')) {
-                inputToUpdate.value = valueToPaste.toUpperCase();
-            } else if (targetTd.classList.contains('item-componente-col')) {
+            if (targetTd.classList.contains('codigo-material-col') || targetTd.classList.contains('item-componente-col')) {
                 inputToUpdate.value = valueToPaste.toUpperCase();
             } else if (targetTd.classList.contains('qtde-montagem-col')) {
                 inputToUpdate.value = valueToPaste.replace(',', '.');
             } else if (targetTd.classList.contains('unidade-medida-col')) {
                 inputToUpdate.value = valueToPaste.toLowerCase();
             } else {
-                inputToUpdate.value = valueToPaste.toUpperCase(); // Para outros campos de texto
+                inputToUpdate.value = valueToPaste.toUpperCase();
             }
-
-            // Dispara o evento 'input' para que outras lógicas (LINHA, etc.) sejam atualizadas
             inputToUpdate.dispatchEvent(new Event('input', { bubbles: true }));
 
-            // Obter os dados da linha ATUALIZADOS APÓS A COLAGEM para verificação de duplicidade
             const updatedRowData = getLinhaData(rowToProcess);
-            currentMaterial = updatedRowData.CODIGO_MATERIAL;
-            currentItemComponente = updatedRowData.ITEM_COMPONENTE;
-            currentQtdeMontagem = updatedRowData.QTDE_MONTAGEM;
-
-            // Lógica de duplicata ao colar (sem splash, apenas soma se for o caso)
-            if (currentMaterial && currentItemComponente) {
-                const existingDuplicateRow = encontrarLinhaDuplicada(
-                    currentMaterial,
-                    currentItemComponente,
-                    rowToProcess // Passa a própria linha para ignorá-la na busca por duplicatas
-                );
-
+            if (updatedRowData.CODIGO_MATERIAL && updatedRowData.ITEM_COMPONENTE) {
+                const existingDuplicateRow = encontrarLinhaDuplicada(updatedRowData.CODIGO_MATERIAL, updatedRowData.ITEM_COMPONENTE, rowToProcess);
                 if (existingDuplicateRow) {
-                    // Se for uma duplicata, soma a quantidade e remove a linha recém-colada.
-                    const qtdeNova = parseFloat(currentQtdeMontagem) || 0;
+                    const qtdeNova = parseFloat(updatedRowData.QTDE_MONTAGEM) || 0;
                     const existingQtdeInput = existingDuplicateRow.querySelector(".qtde-montagem-col input");
                     if (existingQtdeInput) {
                         const currentQtde = parseFloat(existingQtdeInput.value.replace(',', '.')) || 0;
                         existingQtdeInput.value = (currentQtde + qtdeNova).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
-                        existingQtdeInput.dispatchEvent(new Event('input', { bubbles: true })); // Dispara input na linha existente
+                        existingQtdeInput.dispatchEvent(new Event('input', { bubbles: true }));
                     }
-                    if (rowToProcess.parentNode) {
-                        rowToProcess.remove(); // Remove a linha recém-colada
-                    }
-                    itemsPastedCount++; // Conta como processado/somado
-                    console.log(`[Colar] Duplicata encontrada para ${currentMaterial}|${currentItemComponente}. Quantidade somada à linha existente.`);
+                    if (rowToProcess.parentNode) rowToProcess.remove();
+                    itemsPastedCount++;
                 } else {
-                    // Não é duplicata, a linha permanece normalmente.
                     itemsPastedCount++;
                 }
             } else {
-                // Se não tem material e componente completos, apenas conta a linha colada.
                 itemsPastedCount++;
             }
         }
-        acaoImportouOuAdicionouLinhas(); // Atualiza SEQ, LINHA, e Duplicatas após colar
-
-        // Nenhuma mensagem final de sucesso/cancelamento. A operação é silenciosa.
-        // Swal.fire("✅ Colagem concluída!", `Foram colados ${itemsPastedCount} item(s) com sucesso.`, "success");
-    } else {
-        console.log("Colagem em elemento não gerenciado pela tabela, permitindo padrão.");
+        acaoImportouOuAdicionouLinhas();
     }
 }
 
 
-// --- Inicialização da Aplicação ---
+// ===================================================================================
+// --- FUNÇÕES DE SALVAMENTO AUTOMÁTICO E RESTAURAÇÃO DE SESSÃO ---
+// ===================================================================================
 
 /**
- * Executado quando o DOM está completamente carregado.
- * Inicializa a tabela com 10 linhas se estiver vazia, ou atualiza o conteúdo existente.
- * Define o estado inicial de visibilidade das colunas e efeitos.
+ * Salva o estado atual da tabela no localStorage do navegador a cada 15 minutos.
+ * Isso acontece silenciosamente em segundo plano.
  */
-document.addEventListener("DOMContentLoaded", () => {
-    if (tabela.rows.length === 0) {
+function salvarEstadoLocalmente() {
+    const linhas = Array.from(tabela.rows);
+    if (linhas.length === 0) {
+        localStorage.removeItem('listaTecnicaAutoSave');
+        return;
+    }
+    const dadosTabela = linhas.map(row => getLinhaData(row));
+    localStorage.setItem('listaTecnicaAutoSave', JSON.stringify(dadosTabela));
+    console.log("Progresso salvo automaticamente às " + new Date().toLocaleTimeString());
+
+    // Notificação sutil de que foi salvo (toast).
+    const Toast = Swal.mixin({
+        toast: true,
+        position: 'top-end',
+        showConfirmButton: false,
+        timer: 3000,
+        timerProgressBar: true,
+        didOpen: (toast) => {
+            toast.addEventListener('mouseenter', Swal.stopTimer);
+            toast.addEventListener('mouseleave', Swal.resumeTimer);
+        }
+    });
+    Toast.fire({
+        icon: 'success',
+        title: 'Progresso salvo automaticamente!'
+    });
+}
+
+/**
+ * Gerencia o fluxo de inicialização da aplicação, perguntando ao usuário
+ * como ele deseja começar: restaurando uma sessão, importando um arquivo ou criando uma nova lista.
+ */
+async function gerenciarInicializacao() {
+    const dadosSalvos = localStorage.getItem('listaTecnicaAutoSave');
+
+    try {
+        if (dadosSalvos) {
+            const result = await Swal.fire({
+                title: 'Como deseja continuar?',
+                text: 'Encontramos um trabalho salvo automaticamente.',
+                icon: 'question',
+                showConfirmButton: true,
+                confirmButtonText: '<i class="material-symbols-outlined" style="vertical-align: sub;">history</i> Restaurar Sessão',
+                confirmButtonColor: '#3085d6',
+                showDenyButton: true,
+                denyButtonText: '<i class="material-symbols-outlined" style="vertical-align: sub;">upload_file</i> Importar Arquivo',
+                denyButtonColor: '#5cb85c',
+                showCancelButton: true,
+                cancelButtonText: '<i class="material-symbols-outlined" style="vertical-align: sub;">add_circle</i> Criar Nova Lista',
+                cancelButtonColor: '#d33',
+                allowOutsideClick: false,
+                allowEscapeKey: false
+            });
+
+            if (result.isConfirmed) {
+                tabela.innerHTML = "";
+                const dadosTabela = JSON.parse(dadosSalvos);
+                dadosTabela.forEach(rowData => tabela.appendChild(criarLinha(rowData)));
+                acaoImportouOuAdicionouLinhas();
+                Swal.fire('Restaurado!', 'Sua sessão anterior foi carregada.', 'success');
+            } else if (result.isDenied) {
+                document.getElementById('inputFile').click();
+                if (tabela.rows.length === 0) {
+                    criar10Linhas();
+                    acaoImportouOuAdicionouLinhas();
+                }
+            } else if (result.dismiss === Swal.DismissReason.cancel) {
+                localStorage.removeItem('listaTecnicaAutoSave');
+                tabela.innerHTML = "";
+                criar10Linhas();
+                acaoImportouOuAdicionouLinhas();
+                Swal.fire('Tudo pronto!', 'Uma nova lista foi criada.', 'info');
+            }
+        } else {
+            const result = await Swal.fire({
+                title: 'Bem-vindo!',
+                text: 'Como deseja começar?',
+                icon: 'info',
+                showConfirmButton: true,
+                confirmButtonText: '<i class="material-symbols-outlined" style="vertical-align: sub;">upload_file</i> Importar Arquivo',
+                confirmButtonColor: '#5cb85c',
+                showCancelButton: true,
+                cancelButtonText: '<i class="material-symbols-outlined" style="vertical-align: sub;">add_circle</i> Criar Nova Lista',
+                cancelButtonColor: '#3085d6',
+                allowOutsideClick: false,
+                allowEscapeKey: false
+            });
+
+            if (result.isConfirmed) {
+                document.getElementById('inputFile').click();
+                if (tabela.rows.length === 0) {
+                    criar10Linhas();
+                    acaoImportouOuAdicionouLinhas();
+                }
+            } else if (result.dismiss === Swal.DismissReason.cancel) {
+                tabela.innerHTML = "";
+                criar10Linhas();
+                acaoImportouOuAdicionouLinhas();
+            }
+        }
+    } catch (error) {
+        console.error("Erro durante a inicialização:", error);
+        tabela.innerHTML = "";
         criar10Linhas();
         acaoImportouOuAdicionouLinhas();
-        Swal.fire("🎉 Bem-vindo!", "A lista foi inicializada com 10 linhas para você começar.", "info");
-    } else {
-        acaoImportouOuAdicionouLinhas();
+        Swal.fire('Ocorreu um erro', 'Iniciando com uma lista vazia.', 'error');
     }
 
+    configurarInterfaceETimers();
+}
+
+/**
+ * Configura elementos da UI e inicia o timer de salvamento automático.
+ * Esta função é chamada DEPOIS que o usuário decide como iniciar a lista.
+ */
+function configurarInterfaceETimers() {
     const tabelaElement = document.getElementById("listaTabela");
     if (!seqAtivo) tabelaElement.classList.add("seq-col-hidden");
     if (!nivelColVisivel) tabelaElement.classList.add("nivel-col-hidden");
     if (hoverEffectAtivo) tabelaElement.classList.add("hover-effect");
     else tabelaElement.classList.add("no-hover-effect");
 
-    // Inicializa o texto dos botões de alternância de visibilidade com ícones Material Symbols
     document.getElementById("toggleSeqBtn").innerHTML = '<span class="material-symbols-outlined">visibility</span> SEQ';
     document.getElementById("toggleNivelColBtn").innerHTML = '<span class="material-symbols-outlined">layers</span> NÍVEL';
     document.getElementById("toggleHoverEffectBtn").innerHTML = '<span class="material-symbols-outlined">straighten</span> Régua';
-});
+
+    // ATIVA O SALVAMENTO AUTOMÁTICO (30 minutos = 1.800.000 ms de 15 em 15 minutos é 900000 15 minutos * 60 segundos/minuto * 1000 milissegundos/segundo = 900.000)
+    setInterval(salvarEstadoLocalmente, 900000);
+    console.log("Sistema de salvamento automático ativado (a cada 15 minutos).");
+
+    /*notas
+
+    * As principais características são:
+
+    * É Privado e Seguro: Esses dados ficam salvos apenas no seu computador, dentro do seu navegador.
+     Eles não são enviados para a internet ou para qualquer servidor. Ninguém além de você
+      (ou alguém usando seu computador e seu perfil no navegador) tem acesso a eles.
+
+    * É Persistente: Os dados continuam lá mesmo que você feche a aba ou reinicie o computador.
+    Eles só são removidos se você escolher a opção "Criar Nova Lista" (como programamos) ou
+    se você limpar os dados de navegação do seu navegador.
+
+    * É Específico do Site: O armazenamento local que a sua aplicação usa só pode ser acessado por ela mesma.
+    Outros sites não podem ver ou mexer nos seus dados salvos.
+
+    * Como Visualizar os Dados Salvos (Opcional)
+    Se tiver curiosidade, você pode ver esses dados facilmente:
+
+    * Abra sua aplicação no navegador. Pressione a tecla F12 para abrir as "Ferramentas de Desenvolvedor".
+
+    * Procure por uma aba chamada "Application" (ou "Aplicação" em português).
+
+    * No menu à esquerda, expanda a opção "Local Storage" (ou "Armazenamento Local").
+
+    * Clique no endereço da sua página (se estiver rodando de um arquivo local, será algo como file://).
+
+    * Você verá uma tabela com uma chave (listaTecnicaAutoSave) e um valor, que será uma longa
+    sequência de texto (em formato JSON) representando todos os dados da sua tabela.
+    */
+}
+
+// ===================================================================================
+// --- FIM:FUNÇÕES DE SALVAMENTO AUTOMÁTICO E RESTAURAÇÃO DE SESSÃO ---
+// ===================================================================================
+
+
+// --- Inicialização da Aplicação ---
+/**
+ * Listener de Inicialização da Aplicação.
+ * Chama a nova função de gerenciamento que oferece opções ao usuário.
+ * O bloco original foi substituído por este novo sistema.
+ */
+document.addEventListener("DOMContentLoaded", gerenciarInicializacao);
