@@ -15,7 +15,6 @@ header {
     display: flex;
     align-items: center;
     margin-bottom: 20px;
-    position: relative; /* Para posicionar o contador de duplicatas */
 }
 
 .logo {
@@ -25,7 +24,47 @@ header {
 
 h1 {
     font-size: 30px;
+    margin-right: 20px; /* Adiciona um espaço à direita do título */
 }
+
+/* --- SEÇÃO DE ESTILOS DO CABEÇALHO ATUALIZADA --- */
+
+/* Agrupa os contadores e informações à direita */
+.header-info {
+    margin-left: auto; /* Joga o bloco todo para a direita */
+    display: flex;
+    align-items: center;
+    gap: 20px; /* Espaço entre o relógio e o contador de duplicatas */
+}
+
+/* Estilo genérico para os displays de informação */
+.info-display, .duplicate-count-display {
+    display: flex;
+    align-items: center;
+    gap: 5px; /* Espaço entre o ícone e o texto */
+    padding: 5px 10px;
+    border-radius: 5px;
+    font-size: 14px;
+    font-weight: bold;
+}
+
+/* Estilo específico para o display de backup */
+.info-display {
+    background-color: #f0f0f0;
+}
+
+/* Estilo específico para o contador de duplicatas */
+.duplicate-count-display {
+    background-color: #f44336; /* Vermelho */
+    color: white;
+}
+
+.info-display .material-symbols-outlined {
+    font-size: 18px;
+}
+
+/* --- FIM DA SEÇÃO ATUALIZADA --- */
+
 
 /* Material Symbols Adjustments */
 h1 .material-symbols-outlined {
@@ -68,28 +107,12 @@ h1 .material-symbols-outlined {
 }
 
 /* Botões de Busca de Duplicatas */
-.find-duplicates-btn { /* Removido .next-duplicate-btn daqui */
+.find-duplicates-btn {
     background-color: #4CAF50; /* Verde */
 }
-.find-duplicates-btn:hover { /* Removido .next-duplicate-btn daqui */
+.find-duplicates-btn:hover {
     background-color: #45a049; /* Verde mais escuro */
 }
-
-/* Contador de Duplicatas */
-.duplicate-count-display {
-    position: absolute;
-    top: 50%;
-    right: 0;
-    transform: translateY(-50%);
-    background-color: #f44336; /* Vermelho */
-    color: white;
-    padding: 5px 10px;
-    border-radius: 5px;
-    font-weight: bold;
-    font-size: 14px;
-    margin-left: 20px; /* Espaço do H1 */
-}
-
 
 /* Controles de Pintura */
 .painting-controls {
@@ -226,7 +249,6 @@ td select:focus {
     box-shadow: 0 0 0 2px rgba(103, 58, 183, 0.2);
 }
 
-/* Esconder as setas em inputs number */
 input[type=number]::-webkit-inner-spin-button,
 input[type=number]::-webkit-outer-spin-button {
     -webkit-appearance: none;
@@ -236,14 +258,12 @@ input[type=number] {
     -moz-appearance: textfield;
 }
 
-/* Coluna de checkbox (1ª coluna) */
 th:nth-child(1), td:nth-child(1) {
     width: 30px;
     text-align: center;
     padding: 8px 5px;
 }
 
-/* Coluna SEQ (2ª coluna) */
 th.seq-col, td.seq-col {
     width: 60px;
     text-align: center;
@@ -256,28 +276,22 @@ td.seq-col {
     color: #555;
 }
 
-/* Coluna NÍVEL (3ª coluna) */
 th.nivel-col, td.nivel-col {
     width: 80px;
     text-align: center;
     background-color: #f2f2f2;
 }
 
-/* --- AJUSTES DAS LARGURAS SOLICITADAS --- */
-th:nth-child(4), td:nth-child(4) { width: 50px; } /* SITE */
-th:nth-child(6), td:nth-child(6) { width: 350px; } /* CÓDIGO_MATERIAL */
-th:nth-child(8), td:nth-child(8) { width: 60px; } /* LINHA */
-th:nth-child(10), td:nth-child(10) { width: 140px; } /* QTDE_MONTAGEM */
+th:nth-child(4), td:nth-child(4) { width: 50px; }
+th:nth-child(6), td:nth-child(6) { width: 350px; }
+th:nth-child(8), td:nth-child(8) { width: 60px; }
+th:nth-child(10), td:nth-child(10) { width: 140px; }
+th:nth-child(5), td:nth-child(5) { width: 90px; }
+th:nth-child(7), td:nth-child(7) { width: 120px; }
+th:nth-child(9), td:nth-child(9) { width: 180px; }
+th:nth-child(11), td:nth-child(11) { width: 100px; }
+th:nth-child(12), td:nth-child(12) { width: 100px; }
 
-/* Larguras para outras colunas para distribuir o espaço */
-th:nth-child(5), td:nth-child(5) { width: 90px; } /* ALTERNATIVA */
-th:nth-child(7), td:nth-child(7) { width: 120px; } /* TIPO ESTRUTURA */
-th:nth-child(9), td:nth-child(9) { width: 180px; } /* ITEM_COMPONENTE */
-th:nth-child(11), td:nth-child(11) { width: 100px; } /* UNIDADE DE MEDIDA */
-th:nth-child(12), td:nth-child(12) { width: 100px; } /* FATOR_SUCATA */
-
-
-/* Regras para indentação baseadas no nível */
 .nivel-1 { background-color: #4664cf !important; }
 .nivel-2 { background-color: #CD5C5C !important; }
 .nivel-3 { background-color: #B3E6B3 !important; }
@@ -289,36 +303,30 @@ th:nth-child(12), td:nth-child(12) { width: 100px; } /* FATOR_SUCATA */
 .nivel-9 { background-color: #9ACD32 !important; }
 .nivel-10 { background-color: #DA70D6 !important; }
 
-/* Classe para o destaque de duplicatas (roxo claro) */
 .highlight-duplicate {
-    background-color: #ff0000 !important; /* Lavender Blush - roxo claro #f0e6ff antigo, troquei para vermelho*/
+    background-color: #ff0000 !important;
 }
 
-/* Para ocultar a coluna SEQ (controlado por JS) */
 .seq-col-hidden th.seq-col,
 .seq-col-hidden td.seq-col {
     display: none;
 }
 
-/* Para ocultar a coluna NÍVEL (controlado por JS) */
 .nivel-col-hidden th.nivel-col,
 .nivel-col-hidden td.nivel-col {
     display: none;
 }
 
-/* Régua ao passar mouse */
 .hover-effect tbody tr:hover {
     background-color: #ffe0b2 !important;
     outline: 1px solid #ffcc80;
 }
 
-/* Para desativar a régua (remover o hover) */
 .no-hover-effect tbody tr:hover {
     background-color: initial !important;
     outline: none !important;
 }
 
-/* Responsividade básica para a tabela */
 @media (max-width: 768px) {
     .table-container {
         overflow-x: auto;
@@ -337,7 +345,6 @@ th:nth-child(12), td:nth-child(12) { width: 100px; } /* FATOR_SUCATA */
     th.nivel-col, td.nivel-col { width: 70px; }
 }
 
-/* Adicionando alguns estilos para os controles de pintura e filtro para um layout mais limpo */
 .painting-controls, .filter-controls {
     display: flex;
     flex-direction: row;
@@ -357,43 +364,35 @@ th:nth-child(12), td:nth-child(12) { width: 100px; } /* FATOR_SUCATA */
     margin-bottom: 10px;
 }
 
-/* Ajustes finos para os botões e checkboxes dentro dos controles */
 .painting-controls .paint-btn,
 .filter-controls button,
 .filter-controls label {
     margin-right: 5px;
 }
 
-/* --- CLASSES PARA OPACIDADE E DESTAQUE --- */
-
-/* Aplica opacidade ao tbody da tabela para escurecer as linhas não focadas */
 #listaTabela tbody.table-faded tr {
-    opacity: 0.2; /* Opacidade para TODAS as linhas */
+    opacity: 0.2;
     transition: opacity 0.3s ease-in-out;
 }
 
-/* Garante que a linha focada tenha opacidade total, mesmo que o tbody esteja com fade */
 #listaTabela tbody tr.highlight-focused-item {
-    opacity: 1 !important; /* MUITO IMPORTANTE: Garante opacidade total */
+    opacity: 1 !important;
     transition: opacity 0.3s ease-in-out;
-    box-shadow: 0 0 15px rgba(0, 0, 0, 0.5); /* Sombra para destacar ainda mais */
-    position: relative; /* Para garantir que a sombra seja renderizada corretamente */
-    z-index: 20; /* Para que a linha fique acima de outras com opacidade */
+    box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
+    position: relative;
+    z-index: 20;
 }
 
-/* Efeito de piscar para a linha encontrada (combina com o roxo claro) */
 .temp-highlight-found {
     animation: flash-found 1s 3;
 }
 
 @keyframes flash-found {
-    0% { background-color: #f0e6ff; } /* Cor original da duplicata (roxo claro ) */
-    50% { background-color: #99FFFF; } /* Um azul claro/ciano para o "flash" */
-    100% { background-color: #f0e6ff; } /* Retorna ao roxo claro */
+    0% { background-color: #f0e6ff; }
+    50% { background-color: #99FFFF; }
+    100% { background-color: #f0e6ff; }
 }
 
-/* Para linhas que o usuário optou por IGNORAR no splash, elas não terão o destaque roxo */
 .no-highlight-on-ignore {
     background-color: transparent !important;
 }
-/* Fim das classes */

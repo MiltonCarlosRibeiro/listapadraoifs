@@ -3,138 +3,45 @@
  * @description Script principal para a aplicação de Lista Técnica IFS.
  * Gerencia a interação com a tabela, importação/exportação de Excel,
  * autopreenchimento de colunas, e funcionalidades de UI.
- * @version 2.0 - Adicionado salvamento automático e restauração de sessão.
+ * @version 2.1 - Adicionado display de horário do último backup local.
  */
 
-/**
- * Referência ao corpo (tbody) da tabela HTML onde os dados serão exibidos.
- * @type {HTMLTableSectionElement}
- */
+// ... (todo o seu código existente até a seção de salvamento automático)
 let tabela = document.getElementById("listaTabela").getElementsByTagName("tbody")[0];
-
-/**
- * Cache para armazenar linhas copiadas, permitindo a operação de colar.
- * @type {Array<Object>}
- */
 let cacheCopiado = [];
-
-/**
- * Estado de visibilidade da coluna "SEQ" (Sequência).
- * @type {boolean}
- */
 let seqAtivo = true;
-
-/**
- * Estado de visibilidade da coluna "NÍVEL".
- * @type {boolean}
- */
 let nivelColVisivel = true;
-
-/**
- * Cor hexadecimal atualmente selecionada para demarcação de células/linhas.
- * @type {string}
- */
 let corSelecionada = "";
-
-/**
- * Modo de demarcação: true para demarcar a linha inteira, false para a célula.
- * @type {boolean}
- */
 let demarcarLinha = false;
-
-/**
- * Modo de remoção de demarcação: true para remover cores ao clicar, false para aplicar.
- * @type {boolean}
- */
 let removerDemarcacao = false;
-
-/**
- * Estado para ignorar ou aplicar o destaque de linhas duplicadas.
- * @type {boolean}
- */
 let ignorarDuplicatas = false;
-
-/**
- * Estado de ativação do efeito de "régua" (highlight da linha ao passar o mouse).
- * @type {boolean}
- */
 let hoverEffectAtivo = true;
-
-/**
- * Definição das cores em formato hexadecimal para cada nível de indentação.
- * @type {Array<string>}
- */
-const nivelColors = [
-    "#4664cf", "#CD5C5C", "#B3E6B3", "#FFD700", "#8A2BE2",
-    "#FF8C00", "#00CED1", "#FF69B4", "#9ACD32", "#DA70D6"
-];
-
-/**
- * Opções para a coluna "TIPO ESTRUTURA".
- * @type {Array<string>}
- */
+const nivelColors = ["#4664cf", "#CD5C5C", "#B3E6B3", "#FFD700", "#8A2BE2", "#FF8C00", "#00CED1", "#FF69B4", "#9ACD32", "#DA70D6"];
 const tiposEstrutura = ["Manufatura", "Comprado", ""];
-
-/**
- * Opções para a coluna "FATOR_SUCATA".
- * @type {Array<string>}
- */
 const fatorSucata = ["0", "15", ""];
-
-/**
- * Opções para a coluna "ALTERNATIVA".
- * @type {Array<string>}
- */
 const alternativas = ["*", ""];
-
-/**
- * Opções para a coluna "SITE".
- * @type {Array<string>}
- */
 const siteValores = ["1", ""];
-
-/**
- * Níveis de 1 a 10 para a coluna "NÍVEL".
- * @type {Array<string>}
- */
 const niveis = Array.from({ length: 10 }, (_, i) => (i + 1).toString());
+let foundDuplicates = [];
+let currentDuplicateIndex = -1;
 
-// --- Variáveis de estado para a navegação de duplicatas ---
-let foundDuplicates = []; // Armazena as TRs que são duplicatas
-let currentDuplicateIndex = -1; // Índice da duplicata atualmente focada
-
-/**
- * Reseta o estado da busca de duplicatas e remove destaques de foco.
- */
 function resetDuplicateSearchState() {
     foundDuplicates = [];
     currentDuplicateIndex = -1;
-    // Remove as classes de opacidade e destaque de todas as linhas e do tbody
     const tbodyElement = document.getElementById("listaTabela").querySelector('tbody');
     tbodyElement.classList.remove("table-faded");
     tabela.querySelectorAll('tr.highlight-focused-item').forEach(row => {
         row.classList.remove('highlight-focused-item');
         row.classList.remove('temp-highlight-found');
     });
-    // Força uma nova verificação de duplicatas para re-aplicar o roxo claro em todos os itens que ainda são duplicatas
     verificarDuplicatas();
 }
 
-/**
- * Procura por uma linha existente na tabela com o mesmo CODIGO_MATERIAL e ITEM_COMPONENTE.
- * Ignora a própria linha se for passada para edição.
- * @param {string} codigoMaterial - O CODIGO_MATERIAL a ser procurado.
- * @param {string} itemComponente - O ITEM_COMPONENTE a ser procurado.
- * @param {HTMLTableRowElement} [currentRow=null] - A linha atual que está sendo editada (para ignorar na busca).
- * @returns {HTMLTableRowElement|null} A primeira linha duplicada encontrada, ou null se nenhuma for encontrada.
- */
 function encontrarLinhaDuplicada(codigoMaterial, itemComponente, currentRow = null) {
     if (!codigoMaterial || !itemComponente) return null;
-
     const linhas = Array.from(tabela.rows);
     for (const row of linhas) {
         if (currentRow && row === currentRow) continue;
-
         const data = getLinhaData(row);
         if (data.CODIGO_MATERIAL.toUpperCase() === codigoMaterial.toUpperCase() &&
             data.ITEM_COMPONENTE.toUpperCase() === itemComponente.toUpperCase()) {
@@ -144,17 +51,10 @@ function encontrarLinhaDuplicada(codigoMaterial, itemComponente, currentRow = nu
     return null;
 }
 
-/**
- * Exibe um SweetAlert2 com opções para lidar com uma duplicata encontrada.
- * @param {Object} newData - Os dados da nova linha ou linha que está sendo colada/digitada.
- * @param {HTMLTableRowElement} existingRow - A linha existente que é uma duplicata.
- * @returns {Promise<string>} Uma promessa que resolve com a ação escolhida pelo usuário ('ignorar', 'cancelar').
- */
 async function mostrarAlertaDuplicata(newData, existingRow) {
     const existingData = getLinhaData(existingRow);
     const qtdeNova = parseFloat(String(newData.QTDE_MONTAGEM).replace(',', '.')) || 0;
     const qtdeExistente = parseFloat(String(existingData.QTDE_MONTAGEM).replace(',', '.')) || 0;
-
     const qtdeNovaFormatada = qtdeNova.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
     const qtdeExistenteFormatada = qtdeExistente.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
 
@@ -166,33 +66,22 @@ async function mostrarAlertaDuplicata(newData, existingRow) {
             <strong>Quantidade na linha a ser inserida:</strong> ${qtdeNovaFormatada}</p>
         `,
         icon: 'warning',
-        showCancelButton: true, // Corresponde ao botão "Cancel"
-        confirmButtonText: 'Ignorar e Inserir', // Este é agora o botão 'confirm'
-        showDenyButton: false, // Desabilita o botão "Não Adicionar"
+        showCancelButton: true,
+        confirmButtonText: 'Ignorar e Inserir',
+        showDenyButton: false,
         allowOutsideClick: false,
         allowEscapeKey: false,
-        reverseButtons: true // Mantém a ordem dos botões como no layout anterior
+        reverseButtons: true
     });
 
-    if (result.isConfirmed) { // "Ignorar e Inserir"
+    if (result.isConfirmed) {
         return 'ignorar';
-    } else if (result.dismiss === Swal.DismissReason.cancel) { // "Cancel"
+    } else if (result.dismiss === Swal.DismissReason.cancel) {
         return 'cancelar';
     }
-    return 'cancelar'; // Default para fechar fora ou por outras razões
+    return 'cancelar';
 }
 
-
-/**
- * Cria um elemento <td> contendo um <input> ou <select>.
- * Aplica event listeners para input, navegação com Enter, e demarcação/pintura.
- * @param {string} type - O tipo do input (e.g., "text").
- * @param {boolean} [readOnly=false] - Se o input deve ser somente leitura.
- * @param {string} [value=""] - O valor inicial do input.
- * @param {boolean} [isPasteTarget=false] - Indica se a célula pode ser alvo de colagem.
- * @param {string} [className=""] - Classes CSS adicionais para o <td>.
- * @returns {HTMLTableCellElement} O elemento <td> criado.
- */
 function inputCell(type, readOnly = false, value = "", isPasteTarget = false, className = "") {
     const td = document.createElement("td");
     const input = document.createElement("input");
@@ -202,9 +91,7 @@ function inputCell(type, readOnly = false, value = "", isPasteTarget = false, cl
 
     if (className) td.classList.add(className);
 
-    // Event listener para mudanças de input
     input.addEventListener("input", async (e) => {
-        // Aplica a formatação (maiúsculas/minúsculas)
         if (e.target.closest('td').classList.contains('unidade-medida-col')) {
             e.target.value = e.target.value.toLowerCase();
         } else {
@@ -213,7 +100,6 @@ function inputCell(type, readOnly = false, value = "", isPasteTarget = false, cl
 
         const currentRow = e.target.closest('tr');
         const currentData = getLinhaData(currentRow);
-
         const isCodigoMaterialCol = e.target.closest('td').classList.contains('codigo-material-col');
         const isItemComponenteCol = e.target.closest('td').classList.contains('item-componente-col');
 
@@ -228,7 +114,6 @@ function inputCell(type, readOnly = false, value = "", isPasteTarget = false, cl
 
             if (existingDuplicateRow) {
                 const action = await mostrarAlertaDuplicata(currentData, existingDuplicateRow);
-
                 resetDuplicateSearchState();
 
                 if (action === 'ignorar') {
@@ -249,7 +134,6 @@ function inputCell(type, readOnly = false, value = "", isPasteTarget = false, cl
                 }
             }
         }
-
         verificarDuplicatas();
         if (td.classList.contains('nivel-col')) {
             aplicarIndentacao(e.target.closest('tr'));
@@ -314,19 +198,10 @@ function inputCell(type, readOnly = false, value = "", isPasteTarget = false, cl
             }
         }
     });
-
     td.appendChild(input);
     return td;
 }
 
-/**
- * Cria um elemento <td> contendo um <select>.
- * Aplica event listeners para mudança de valor, navegação com Enter, e demarcação/pintura.
- * @param {Array<string>} [options=[]] - As opções para o <select>.
- * @param {string} [selected=""] - A opção pré-selecionada.
- * @param {string} [className=""] - Classes CSS adicionais para o <td>.
- * @returns {HTMLTableCellElement} O elemento <td> criado.
- */
 function selectCell(options = [], selected = "", className = "") {
     const td = document.createElement("td");
     const select = document.createElement("select");
@@ -397,11 +272,6 @@ function selectCell(options = [], selected = "", className = "") {
     return td;
 }
 
-/**
- * Cria uma nova linha (<tr>) na tabela com todas as células padrão (input, select, checkbox).
- * @param {Object} [v={}] - Um objeto contendo os valores iniciais para preencher as células.
- * @returns {HTMLTableRowElement} A linha (<tr>) criada.
- */
 function criarLinha(v = {}) {
     const row = document.createElement("tr");
 
@@ -438,11 +308,9 @@ function criarLinha(v = {}) {
     row.appendChild(selectCell(alternativas, v.ALTERNATIVA || "*"));
     row.appendChild(inputCell("text", false, v.CODIGO_MATERIAL || "", true, "codigo-material-col"));
     row.appendChild(selectCell(tiposEstrutura, v.TIPO_ESTRUTURA || "Manufatura"));
-
     const linhaCell = inputCell("text", true, v.LINHA || "");
     linhaCell.classList.add("linha-auto-col");
     row.appendChild(linhaCell);
-
     row.appendChild(inputCell("text", false, v.ITEM_COMPONENTE || "", true, "item-componente-col"));
     row.appendChild(inputCell("text", false, v.QTDE_MONTAGEM || "", false, "qtde-montagem-col"));
     row.appendChild(inputCell("text", false, (v.UNIDADE_MEDIDA || "").toLowerCase(), true, "unidade-medida-col"));
@@ -456,27 +324,9 @@ function criarLinha(v = {}) {
     return row;
 }
 
-/**
- * Cria uma nova linha vazia, usando a função `criarLinha` sem valores iniciais.
- * @returns {HTMLTableRowElement} A linha vazia criada.
- */
-function criarLinhaVazia() {
-    return criarLinha({});
-}
+function criarLinhaVazia() { return criarLinha({}); }
+function criar10Linhas() { for (let i = 0; i < 10; i++) { tabela.appendChild(criarLinhaVazia()); } }
 
-/**
- * Adiciona 10 novas linhas vazias à tabela.
- */
-function criar10Linhas() {
-    for (let i = 0; i < 10; i++) {
-        tabela.appendChild(criarLinhaVazia());
-    }
-}
-
-/**
- * Atualiza os números de sequência (coluna "SEQ") para todas as linhas da tabela.
- * Cada linha recebe um número múltiplo de 10 (10, 20, 30...).
- */
 function atualizarSequencias() {
     const linhas = tabela.querySelectorAll("tr");
     linhas.forEach((row, index) => {
@@ -484,7 +334,6 @@ function atualizarSequencias() {
         if (seqTd) seqTd.textContent = (index + 1) * 1;
     });
 }
-
 
 function atualizarColunaLinha() {
     const rows = Array.from(tabela.rows);
@@ -500,17 +349,10 @@ function atualizarColunaLinha() {
             if (linhaInput) linhaInput.value = "";
             return;
         }
-
-        if (itemComponente.toUpperCase().startsWith("MP1-")) {
-            return;
-        }
-
+        if (itemComponente.toUpperCase().startsWith("MP1-")) { return; }
         if (codigoMaterial !== "") {
             if (!groupedData.has(codigoMaterial)) {
-                groupedData.set(codigoMaterial, {
-                    rows: [],
-                    hasMPGeneral: false
-                });
+                groupedData.set(codigoMaterial, { rows: [], hasMPGeneral: false });
             }
             const group = groupedData.get(codigoMaterial);
             group.rows.push(row);
@@ -530,24 +372,20 @@ function atualizarColunaLinha() {
         const linhaInput = row.querySelectorAll("td")[7]?.querySelector("input");
 
         if (!linhaInput) return;
-
         if (codigoMaterial === "" && itemComponente === "") {
             currentCodigoMaterial = "";
             currentSequence = 10;
             return;
         }
-
         if (itemComponente.toUpperCase().startsWith("MP1-")) {
             linhaInput.value = "10";
             return;
         }
-
         if (codigoMaterial !== "") {
             if (codigoMaterial !== currentCodigoMaterial) {
                 currentCodigoMaterial = codigoMaterial;
                 currentSequence = 10;
             }
-
             const group = groupedData.get(codigoMaterial);
             if (group && group.hasMPGeneral) {
                 linhaInput.value = "10";
@@ -563,11 +401,6 @@ function atualizarColunaLinha() {
     });
 }
 
-
-/**
- * Aplica classes CSS à linha para indentação visual baseada no valor da coluna "NÍVEL".
- * @param {HTMLTableRowElement} row - A linha (<tr>) a ser indentada.
- */
 function aplicarIndentacao(row) {
     for (let i = 1; i <= 10; i++) row.classList.remove(`nivel-${i}`);
     const nivelInput = row.querySelectorAll("td")[2]?.querySelector("input");
@@ -579,11 +412,6 @@ function aplicarIndentacao(row) {
     }
 }
 
-/**
- * Extrai os dados de uma linha da tabela e os retorna como um objeto.
- * @param {HTMLTableRowElement} tr - A linha (<tr>) da qual extrair os dados.
- * @returns {Object} Um objeto com os dados da linha.
- */
 function getLinhaData(tr) {
     const cells = tr.querySelectorAll("td");
     return {
@@ -600,11 +428,6 @@ function getLinhaData(tr) {
     };
 }
 
-/**
- * Preenche as células de uma linha da tabela com os dados fornecidos.
- * @param {HTMLTableRowElement} row - A linha (<tr>) a ser preenchida.
- * @param {Object} data - Um objeto com os dados para preencher a linha.
- */
 function preencherLinha(row, data) {
     const cells = row.querySelectorAll("td");
     cells[2].querySelector("input").value = data.NIVEL || "";
@@ -619,68 +442,34 @@ function preencherLinha(row, data) {
     cells[11].querySelector("select").value = data.FATOR_SUCATA || "0";
 }
 
-
 function verificarDuplicatas() {
     const linhas = Array.from(tabela.rows);
-
-    linhas.forEach(row => {
-        row.classList.remove("highlight-duplicate");
-        row.classList.remove("no-highlight-on-ignore");
-    });
-
-    if (ignorarDuplicatas) {
-        document.getElementById("duplicateCountDisplay").textContent = "";
-        resetDuplicateSearchState();
-        return;
-    }
-
+    linhas.forEach(row => { row.classList.remove("highlight-duplicate"); row.classList.remove("no-highlight-on-ignore"); });
+    if (ignorarDuplicatas) { document.getElementById("duplicateCountDisplay").textContent = ""; resetDuplicateSearchState(); return; }
     const combinaçõesDetectadas = new Map();
     const tempFoundDuplicates = [];
-
     linhas.forEach((tr) => {
         const data = getLinhaData(tr);
-        if (data.CODIGO_MATERIAL === "" || data.ITEM_COMPONENTE === "") {
-            return;
-        }
-
+        if (data.CODIGO_MATERIAL === "" || data.ITEM_COMPONENTE === "") { return; }
         const hash = `${data.CODIGO_MATERIAL.toUpperCase()}|${data.ITEM_COMPONENTE.toUpperCase()}`;
-
-        if (!combinaçõesDetectadas.has(hash)) {
-            combinaçõesDetectadas.set(hash, []);
-        }
+        if (!combinaçõesDetectadas.has(hash)) { combinaçõesDetectadas.set(hash, []); }
         combinaçõesDetectadas.get(hash).push(tr);
     });
-
     let duplicateCount = 0;
     for (const [hash, rows] of combinaçõesDetectadas) {
         if (rows.length > 1) {
-            rows.forEach(row => {
-                if (!row.classList.contains("no-highlight-on-ignore")) {
-                    row.classList.add("highlight-duplicate");
-                }
-            });
+            rows.forEach(row => { if (!row.classList.contains("no-highlight-on-ignore")) { row.classList.add("highlight-duplicate"); } });
             tempFoundDuplicates.push(...rows);
             duplicateCount += rows.length;
         }
     }
     foundDuplicates = tempFoundDuplicates.filter(row => row.classList.contains("highlight-duplicate"));
     foundDuplicates.sort((a, b) => Array.from(tabela.rows).indexOf(a) - Array.from(tabela.rows).indexOf(b));
-
     const displayElement = document.getElementById("duplicateCountDisplay");
-    if (foundDuplicates.length > 0) {
-        displayElement.textContent = `⚠️ ${foundDuplicates.length} duplicata(s)`;
-    } else {
-        displayElement.textContent = "";
-    }
-
+    if (foundDuplicates.length > 0) { displayElement.textContent = `⚠️ ${foundDuplicates.length} duplicata(s)`; } else { displayElement.textContent = ""; }
     currentDuplicateIndex = -1;
 }
 
-/**
- * Converte uma cor RGB (string "rgb(r, g, b)") para sua representação hexadecimal.
- * @param {string} rgb - A string da cor RGB.
- * @returns {string} A string da cor em formato hexadecimal (e.g., "#RRGGBB").
- */
 function rgbToHex(rgb) {
     if (!rgb || rgb.indexOf('rgb') === -1) return rgb ? rgb.toUpperCase() : "";
     const parts = rgb.match(/^rgb\((\d+),\s*(\d+),\s*(\d+)\)$/);
@@ -693,67 +482,27 @@ function rgbToHex(rgb) {
     return "#" + parts.join("").toUpperCase();
 }
 
-/**
- * Exporta os dados da tabela atual para um arquivo Excel (.xlsx).
- * Inclui apenas as colunas especificadas e ignora linhas "vazias" (separadores).
- */
 function exportarParaExcel() {
-    const ws_data = [
-        ["NIVEL", "SITE", "ALTERNATIVA", "CODIGO_MATERIAL", "TIPO ESTRUTURA", "LINHA", "ITEM_COMPONENTE", "QTDE_MONTAGEM", "UNIDADE DE MEDIDA", "FATOR_SUCATA"]
-    ];
-
+    const ws_data = [["NIVEL", "SITE", "ALTERNATIVA", "CODIGO_MATERIAL", "TIPO ESTRUTURA", "LINHA", "ITEM_COMPONENTE", "QTDE_MONTAGEM", "UNIDADE DE MEDIDA", "FATOR_SUCATA"]];
     tabela.querySelectorAll("tr").forEach(row => {
         const rowData = getLinhaData(row);
-
-        if (rowData.CODIGO_MATERIAL === "" && rowData.ITEM_COMPONENTE === "") {
-            return;
-        }
-
-        const dataRow = [
-            rowData.NIVEL,
-            rowData.SITE,
-            rowData.ALTERNATIVA,
-            rowData.CODIGO_MATERIAL,
-            rowData.TIPO_ESTRUTURA,
-            rowData.LINHA,
-            rowData.ITEM_COMPONENTE,
-            rowData.QTDE_MONTAGEM,
-            rowData.UNIDADE_MEDIDA,
-            rowData.FATOR_SUCATA
-        ];
+        if (rowData.CODIGO_MATERIAL === "" && rowData.ITEM_COMPONENTE === "") { return; }
+        const dataRow = [rowData.NIVEL, rowData.SITE, rowData.ALTERNATIVA, rowData.CODIGO_MATERIAL, rowData.TIPO_ESTRUTURA, rowData.LINHA, rowData.ITEM_COMPONENTE, rowData.QTDE_MONTAGEM, rowData.UNIDADE_MEDIDA, rowData.FATOR_SUCATA];
         ws_data.push(dataRow);
     });
-
-    if (ws_data.length <= 1) {
-        Swal.fire("ℹ️ Nada para Exportar", "A tabela está vazia ou contém apenas linhas sem dados preenchidos.", "info");
-        return;
-    }
-
+    if (ws_data.length <= 1) { Swal.fire("ℹ️ Nada para Exportar", "A tabela está vazia ou contém apenas linhas sem dados preenchidos.", "info"); return; }
     const ws = XLSX.utils.aoa_to_sheet(ws_data);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Lista Tecnica");
-
     const now = new Date();
-    const dateStr = now.getFullYear() + "-" +
-                    String(now.getMonth() + 1).padStart(2, '0') + "-" +
-                    String(now.getDate()).padStart(2, '0') + "_" +
-                    String(now.getHours()).padStart(2, '0') + "-" +
-                    String(now.getMinutes()).padStart(2, '0') + "-" +
-                    String(now.getSeconds()).padStart(2, '0');
-
+    const dateStr = now.getFullYear() + "-" + String(now.getMonth() + 1).padStart(2, '0') + "-" + String(now.getDate()).padStart(2, '0') + "_" + String(now.getHours()).padStart(2, '0') + "-" + String(now.getMinutes()).padStart(2, '0') + "-" + String(now.getSeconds()).padStart(2, '0');
     XLSX.writeFile(wb, `Lista_Tecnica_${dateStr}.xlsx`);
-
     Swal.fire("✅ Exportado!", `A lista foi exportada para 'Lista_Tecnica_${dateStr}.xlsx'.`, "success");
-
 }
 
 function carregarExcel(inputElement) {
     const file = inputElement.files[0];
-    if (!file) {
-        Swal.fire("⚠️ Nenhum arquivo selecionado", "Por favor, selecione um arquivo Excel.", "warning");
-        return;
-    }
-
+    if (!file) { Swal.fire("⚠️ Nenhum arquivo selecionado", "Por favor, selecione um arquivo Excel.", "warning"); return; }
     const reader = new FileReader();
     reader.onload = function (e) {
         const data = new Uint8Array(e.target.result);
@@ -761,17 +510,10 @@ function carregarExcel(inputElement) {
         const firstSheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[firstSheetName];
         const json = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-
-        if (json.length === 0 || !json[0]) {
-            Swal.fire("⚠️ Arquivo Vazio ou Inválido", "O arquivo Excel está vazio, não contém cabeçalhos ou dados.", "warning");
-            return;
-        }
-
+        if (json.length === 0 || !json[0]) { Swal.fire("⚠️ Arquivo Vazio ou Inválido", "O arquivo Excel está vazio, não contém cabeçalhos ou dados.", "warning"); return; }
         tabela.innerHTML = "";
-
         const headers = json[0].map(h => String(h).trim().replace(/\s/g, '_').toUpperCase());
         const dataRows = json.slice(1);
-
         const colIndices = {
             NIVEL: headers.indexOf("NIVEL"),
             SITE: headers.indexOf("SITE"),
@@ -781,20 +523,9 @@ function carregarExcel(inputElement) {
             LINHA: headers.indexOf("LINHA"),
             ITEM_COMPONENTE: headers.indexOf("ITEM_COMPONENTE"),
             QTDE_MONTAGEM: headers.indexOf("QTDE_MONTAGEM"),
-            UNIDADE_MEDIDA: headers.indexOf("UNIDADE_DE_MEDIDA") !== -1 ?
-                            headers.indexOf("UNIDADE_DE_MEDIDA") :
-                            headers.indexOf("UNIDADE_MEDIDA"),
+            UNIDADE_MEDIDA: headers.indexOf("UNIDADE_DE_MEDIDA") !== -1 ? headers.indexOf("UNIDADE_DE_MEDIDA") : headers.indexOf("UNIDADE_MEDIDA"),
             FATOR_SUCATA: headers.indexOf("FATOR_SUCATA")
         };
-
-        console.log("Cabeçalhos do Excel (normalizados):", headers);
-        console.log("Índices de Colunas Mapeados:", colIndices);
-        for (const key in colIndices) {
-            if (colIndices[key] === -1) {
-                console.warn(`Atenção: A coluna "${key}" não foi encontrada no Excel. Verifique o nome do cabeçalho.`);
-            }
-        }
-
         dataRows.forEach(rowData => {
             const rowObj = {
                 NIVEL: colIndices.NIVEL !== -1 && rowData[colIndices.NIVEL] !== undefined ? String(rowData[colIndices.NIVEL]) : "",
@@ -810,24 +541,17 @@ function carregarExcel(inputElement) {
             const newRow = criarLinha(rowObj);
             tabela.appendChild(newRow);
         });
-
         acaoImportouOuAdicionouLinhas();
         Swal.fire("✅ Importado!", "Os dados do Excel foram carregados e atualizados.", "success");
     };
     reader.readAsArrayBuffer(file);
 }
 
-/**
- * Função unificada para disparar todas as atualizações necessárias
- * após ações que modificam o conteúdo ou a estrutura das linhas da tabela.
- */
 function acaoImportouOuAdicionouLinhas() {
     atualizarSequencias();
     atualizarColunaLinha();
     verificarDuplicatas();
 }
-
-// --- Event Listeners para Botões da Barra de Ferramentas ---
 
 document.getElementById("criarListaBtn").addEventListener("click", () => {
     tabela.innerHTML = "";
@@ -835,55 +559,32 @@ document.getElementById("criarListaBtn").addEventListener("click", () => {
     acaoImportouOuAdicionouLinhas();
     Swal.fire("✅ Lista Criada!", "10 novas linhas foram adicionadas.", "success");
 });
-
 document.getElementById("continuarListaBtn").addEventListener("click", () => {
     criar10Linhas();
     acaoImportouOuAdicionouLinhas();
     Swal.fire("➕ Adicionado", "10 novas linhas foram inseridas.", "success");
 });
-
 document.getElementById("salvarListaBtn").addEventListener("click", exportarParaExcel);
-
 document.getElementById("copiarSelecionadoBtn").addEventListener("click", () => {
     const linhasSelecionadas = Array.from(tabela.querySelectorAll(".linha-selecao:checked")).map(cb => cb.closest("tr"));
-    if (linhasSelecionadas.length === 0) {
-        Swal.fire("⚠️ Nada para Copiar", "Nenhuma linha selecionada para cópia.", "warning");
-        return;
-    }
+    if (linhasSelecionadas.length === 0) { Swal.fire("⚠️ Nada para Copiar", "Nenhuma linha selecionada para cópia.", "warning"); return; }
     cacheCopiado = linhasSelecionadas.map(row => getLinhaData(row));
     Swal.fire("✅ Copiado!", `${cacheCopiado.length} linhas copiadas.`, "success");
 });
-
 document.getElementById("colarBtn").addEventListener("click", () => {
-    if (cacheCopiado.length === 0) {
-        Swal.fire("ℹ️ Nada para Colar", "Nenhum dado copiado.", "info");
-        return;
-    }
-
+    if (cacheCopiado.length === 0) { Swal.fire("ℹ️ Nada para Colar", "Nenhum dado copiado.", "info"); return; }
     const linhasSelecionadas = Array.from(tabela.querySelectorAll(".linha-selecao:checked")).map(cb => cb.closest("tr"));
     const startIndex = linhasSelecionadas.length > 0 ? Array.from(tabela.rows).indexOf(linhasSelecionadas[0]) : tabela.rows.length;
-
     cacheCopiado.forEach((rowData, i) => {
         const targetRow = tabela.rows[startIndex + i];
-        if (targetRow) {
-            preencherLinha(targetRow, rowData);
-        } else {
-            const newRow = criarLinha(rowData);
-            tabela.appendChild(newRow);
-        }
+        if (targetRow) { preencherLinha(targetRow, rowData); } else { const newRow = criarLinha(rowData); tabela.appendChild(newRow); }
     });
-
     acaoImportouOuAdicionouLinhas();
     Swal.fire("✅ Colado!", `${cacheCopiado.length} linhas coladas.`, "success");
 });
-
 document.getElementById("deletarSelecionadosBtn").addEventListener("click", () => {
     const linhasParaDeletar = Array.from(tabela.querySelectorAll(".linha-selecao:checked")).map(cb => cb.closest("tr"));
-    if (linhasParaDeletar.length === 0) {
-        Swal.fire("⚠️ Nenhuma Linha Selecionada", "Selecione as linhas para deletar.", "warning");
-        return;
-    }
-
+    if (linhasParaDeletar.length === 0) { Swal.fire("⚠️ Nenhuma Linha Selecionada", "Selecione as linhas para deletar.", "warning"); return; }
     Swal.fire({
         title: 'Tem certeza?',
         text: `Você vai deletar ${linhasParaDeletar.length} linha(s).`,
@@ -901,49 +602,34 @@ document.getElementById("deletarSelecionadosBtn").addEventListener("click", () =
         }
     });
 });
-
 document.getElementById("inserirAcimaBtn").addEventListener("click", () => {
     const linhasSelecionadas = Array.from(tabela.querySelectorAll(".linha-selecao:checked")).map(cb => cb.closest("tr"));
-    if (linhasSelecionadas.length === 0) {
-        Swal.fire("⚠️ Nenhuma Linha Selecionada", "Selecione a(s) linha(s) acima da qual deseja inserir.", "warning");
-        return;
-    }
+    if (linhasSelecionadas.length === 0) { Swal.fire("⚠️ Nenhuma Linha Selecionada", "Selecione a(s) linha(s) acima da qual deseja inserir.", "warning"); return; }
     const primeiraLinhaSelecionada = linhasSelecionadas[0];
     const novaLinha = criarLinhaVazia();
     tabela.insertBefore(novaLinha, primeiraLinhaSelecionada);
     acaoImportouOuAdicionouLinhas();
     Swal.fire("⬆️ Inserido", "Uma nova linha foi inserida acima da seleção.", "success");
 });
-
 document.getElementById("inserirAbaixoBtn").addEventListener("click", () => {
     const linhasSelecionadas = Array.from(tabela.querySelectorAll(".linha-selecao:checked")).map(cb => cb.closest("tr"));
-    if (linhasSelecionadas.length === 0) {
-        Swal.fire("⚠️ Nenhuma Linha Selecionada", "Selecione a(s) linha(s) abaixo da qual deseja inserir.", "warning");
-        return;
-    }
+    if (linhasSelecionadas.length === 0) { Swal.fire("⚠️ Nenhuma Linha Selecionada", "Selecione a(s) linha(s) abaixo da qual deseja inserir.", "warning"); return; }
     const ultimaLinhaSelecionada = linhasSelecionadas[linhasSelecionadas.length - 1];
     const novaLinha = criarLinhaVazia();
-    if (ultimaLinhaSelecionada.nextElementSibling) {
-        tabela.insertBefore(novaLinha, ultimaLinhaSelecionada.nextElementSibling);
-    } else {
-        tabela.appendChild(novaLinha);
-    }
+    if (ultimaLinhaSelecionada.nextElementSibling) { tabela.insertBefore(novaLinha, ultimaLinhaSelecionada.nextElementSibling); } else { tabela.appendChild(novaLinha); }
     acaoImportouOuAdicionouLinhas();
     Swal.fire("⬇️ Inserido", "Uma nova linha foi inserida abaixo da seleção.", "success");
 });
-
 document.getElementById("toggleSeqBtn").addEventListener("click", () => {
     seqAtivo = !seqAtivo;
     document.getElementById("listaTabela").classList.toggle("seq-col-hidden", !seqAtivo);
     document.getElementById("toggleSeqBtn").innerHTML = seqAtivo ? '<span class="material-symbols-outlined">visibility</span> SEQ' : '<span class="material-symbols-outlined">visibility_off</span> SEQ';
 });
-
 document.getElementById("toggleNivelColBtn").addEventListener("click", () => {
     nivelColVisivel = !nivelColVisivel;
     document.getElementById("listaTabela").classList.toggle("nivel-col-hidden", !nivelColVisivel);
     document.getElementById("toggleNivelColBtn").innerHTML = nivelColVisivel ? '<span class="material-symbols-outlined">layers</span> NÍVEL' : '<span class="material-symbols-outlined">layers_clear</span> NÍVEL';
 });
-
 document.getElementById("toggleHoverEffectBtn").addEventListener("click", () => {
     hoverEffectAtivo = !hoverEffectAtivo;
     const tableElement = document.getElementById("listaTabela");
@@ -951,7 +637,6 @@ document.getElementById("toggleHoverEffectBtn").addEventListener("click", () => 
     tableElement.classList.toggle("no-hover-effect", !hoverEffectAtivo);
     document.getElementById("toggleHoverEffectBtn").innerHTML = hoverEffectAtivo ? '<span class="material-symbols-outlined">straighten</span> Régua' : '<span class="material-symbols-outlined">format_line_spacing</span> Régua';
 });
-
 document.getElementById("clearPaintBtn").addEventListener("click", () => {
     corSelecionada = "";
     demarcarLinha = false;
@@ -960,19 +645,16 @@ document.getElementById("clearPaintBtn").addEventListener("click", () => {
     document.getElementById("removerDemarcacaoCheckbox").checked = false;
     Swal.fire("🎨 Limpeza", "Seleção de cor e modos de demarcação limpos.", "info");
 });
-
 document.getElementById("demarcarLinhaCheckbox").addEventListener("change", (e) => {
     demarcarLinha = e.target.checked;
     if (demarcarLinha) removerDemarcacao = false;
     document.getElementById("removerDemarcacaoCheckbox").checked = false;
 });
-
 document.getElementById("removerDemarcacaoCheckbox").addEventListener("change", (e) => {
     removerDemarcacao = e.target.checked;
     if (removerDemarcacao) demarcarLinha = false;
     document.getElementById("demarcarLinhaCheckbox").checked = false;
 });
-
 const nivelColorButtonsDiv = document.getElementById("nivelColorButtons");
 nivelColors.forEach((color, index) => {
     const button = document.createElement("button");
@@ -987,98 +669,60 @@ nivelColors.forEach((color, index) => {
     });
     nivelColorButtonsDiv.appendChild(button);
 });
-
 document.querySelectorAll("#attentionColorButtons .paint-btn").forEach(button => {
     button.addEventListener("click", (e) => {
         corSelecionada = e.target.dataset.color;
         Swal.fire(`🎨 Cor Selecionada`, `Cor ${e.target.textContent.trim()} selecionada.`, "info");
     });
 });
-
 function getContrastColor(hexcolor) {
-    if (!hexcolor.startsWith("#")) {
-        return "black";
-    }
+    if (!hexcolor.startsWith("#")) { return "black"; }
     const r = parseInt(hexcolor.slice(1, 3), 16);
     const g = parseInt(hexcolor.slice(3, 5), 16);
     const b = parseInt(hexcolor.slice(5, 7), 16);
-    const hsp = Math.sqrt(
-        0.299 * (r * r) +
-        0.587 * (g * g) +
-        0.114 * (b * b)
-    );
+    const hsp = Math.sqrt(0.299 * (r * r) + 0.587 * (g * g) + 0.114 * (b * b));
     return (hsp > 127.5) ? "black" : "white";
 }
-
-document.getElementById("ignorarDuplicatasCheckbox").addEventListener("change", (e) => {
-    ignorarDuplicatas = e.target.checked;
-    verificarDuplicatas();
-});
-
+document.getElementById("ignorarDuplicatasCheckbox").addEventListener("change", (e) => { ignorarDuplicatas = e.target.checked; verificarDuplicatas(); });
 document.getElementById("toggleAllCheckboxesHeader").addEventListener("click", (e) => {
     const isChecked = e.target.checked;
     document.getElementById("toggleAllCheckboxes").checked = isChecked;
-    tabela.querySelectorAll(".linha-selecao").forEach(checkbox => {
-        checkbox.checked = isChecked;
-    });
+    tabela.querySelectorAll(".linha-selecao").forEach(checkbox => { checkbox.checked = isChecked; });
 });
-
 document.getElementById("toggleAllCheckboxes").addEventListener("click", (e) => {
     const isChecked = e.target.checked;
     document.getElementById("toggleAllCheckboxesHeader").checked = isChecked;
-    tabela.querySelectorAll(".linha-selecao").forEach(checkbox => {
-        checkbox.checked = isChecked;
-    });
+    tabela.querySelectorAll(".linha-selecao").forEach(checkbox => { checkbox.checked = isChecked; });
 });
-
 document.getElementById("inputFile").addEventListener("change", function (e) {
     carregarExcel(e.target);
     e.target.value = '';
 });
-
 document.getElementById("findDuplicatesBtn").addEventListener("click", () => {
     resetDuplicateSearchState();
-
     const currentDuplicates = Array.from(tabela.querySelectorAll('tr.highlight-duplicate'));
-
-    if (currentDuplicates.length === 0) {
-        Swal.fire("ℹ️ Sem Duplicatas", "Não há itens duplicados para buscar na lista.", "info");
-        return;
-    }
-
-    foundDuplicates = currentDuplicates.sort((a, b) => {
-        return Array.from(tabela.rows).indexOf(a) - Array.from(tabela.rows).indexOf(b);
-    });
-
+    if (currentDuplicates.length === 0) { Swal.fire("ℹ️ Sem Duplicatas", "Não há itens duplicados para buscar na lista.", "info"); return; }
+    foundDuplicates = currentDuplicates.sort((a, b) => { return Array.from(tabela.rows).indexOf(a) - Array.from(tabela.rows).indexOf(b); });
     currentDuplicateIndex = 0;
     focusOnDuplicate(foundDuplicates[currentDuplicateIndex]);
 });
-
 function focusOnDuplicate(rowToFocus) {
     if (!rowToFocus) return;
-
     const tbodyElement = document.getElementById("listaTabela").querySelector('tbody');
-    tabela.querySelectorAll('tr').forEach(row => {
-        row.classList.remove('highlight-focused-item');
-        row.classList.remove('temp-highlight-found');
-    });
-
+    tabela.querySelectorAll('tr').forEach(row => { row.classList.remove('highlight-focused-item'); row.classList.remove('temp-highlight-found'); });
     tbodyElement.classList.add("table-faded");
     rowToFocus.classList.add('highlight-focused-item');
     rowToFocus.classList.add('highlight-duplicate');
     rowToFocus.classList.add('temp-highlight-found');
     rowToFocus.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
-
 document.addEventListener('keydown', (e) => {
     const tbodyElement = document.getElementById("listaTabela").querySelector('tbody');
     if (foundDuplicates.length > 0 && tbodyElement.classList.contains("table-faded")) {
         if (e.key === 'Enter') {
             e.preventDefault();
             currentDuplicateIndex++;
-            if (currentDuplicateIndex >= foundDuplicates.length) {
-                currentDuplicateIndex = 0;
-            }
+            if (currentDuplicateIndex >= foundDuplicates.length) { currentDuplicateIndex = 0; }
             focusOnDuplicate(foundDuplicates[currentDuplicateIndex]);
         } else if (e.key === 'Escape') {
             e.preventDefault();
@@ -1087,62 +731,34 @@ document.addEventListener('keydown', (e) => {
         }
     }
 });
-
 document.addEventListener('paste', handlePasteMultipleLines);
-
 async function handlePasteMultipleLines(event) {
     const pastedText = (event.clipboardData || window.clipboardData).getData('text');
     if (!pastedText) return;
-
-    const lines = pastedText
-        .split(/\r?\n/)
-        .map(line => line.trim())
-        .filter(line => line !== '');
-
+    const lines = pastedText.split(/\r?\n/).map(line => line.trim()).filter(line => line !== '');
     if (lines.length === 0) return;
-
-    const possibleHeaders = new Set([
-        'seq', 'codigo_material', 'codigo', 'qtd', 'qtde', 'un', 'unidade_de_medida', 'unidade_medida', 'unidade', 'descricao', 'item_componente', 'item', 'linha', 'nivel', 'site', 'alternativa', 'tipo_estrutura', 'fator_sucata'
-    ]);
+    const possibleHeaders = new Set(['seq', 'codigo_material', 'codigo', 'qtd', 'qtde', 'un', 'unidade_de_medida', 'unidade_medida', 'unidade', 'descricao', 'item_componente', 'item', 'linha', 'nivel', 'site', 'alternativa', 'tipo_estrutura', 'fator_sucata']);
     const normalizeHeader = str => str.normalize('NFD').replace(/[\u0300-\u036f\s_]/g, "").toLowerCase();
     const firstLineNormalized = normalizeHeader(lines[0]);
     const isHeader = Array.from(possibleHeaders).some(header => firstLineNormalized.startsWith(normalizeHeader(header)));
     const realLines = lines.slice(isHeader ? 1 : 0);
-
     if (realLines.length === 0) return;
-
     const activeElement = document.activeElement;
     if (activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'SELECT') && activeElement.closest('#listaTabela')) {
         event.preventDefault();
-
         const targetRow = activeElement.closest('tr');
         const targetTd = activeElement.closest('td');
         const rowIndex = Array.from(tabela.rows).indexOf(targetRow);
         const columnIndex = Array.from(targetRow.children).indexOf(targetTd);
         let itemsPastedCount = 0;
-
         for (let i = 0; i < realLines.length; i++) {
             let rowToProcess = tabela.rows[rowIndex + i];
-            if (!rowToProcess) {
-                rowToProcess = criarLinhaVazia();
-                tabela.appendChild(rowToProcess);
-            }
-
+            if (!rowToProcess) { rowToProcess = criarLinhaVazia(); tabela.appendChild(rowToProcess); }
             const inputToUpdate = rowToProcess.children[columnIndex]?.querySelector('input, select');
             if (!inputToUpdate) continue;
-
             let valueToPaste = realLines[i];
-            if (targetTd.classList.contains('codigo-material-col') || targetTd.classList.contains('item-componente-col')) {
-                inputToUpdate.value = valueToPaste.toUpperCase();
-            } else if (targetTd.classList.contains('qtde-montagem-col')) {
-                inputToUpdate.value = valueToPaste.replace(',', '.');
-            } else if (targetTd.classList.contains('unidade-medida-col')) {
-                inputToUpdate.value = valueToPaste.toLowerCase();
-            } else {
-                inputToUpdate.value = valueToPaste.toUpperCase();
-            }
+            if (targetTd.classList.contains('codigo-material-col') || targetTd.classList.contains('item-componente-col')) { inputToUpdate.value = valueToPaste.toUpperCase(); } else if (targetTd.classList.contains('qtde-montagem-col')) { inputToUpdate.value = valueToPaste.replace(',', '.'); } else if (targetTd.classList.contains('unidade-medida-col')) { inputToUpdate.value = valueToPaste.toLowerCase(); } else { inputToUpdate.value = valueToPaste.toUpperCase(); }
             inputToUpdate.dispatchEvent(new Event('input', { bubbles: true }));
-
             const updatedRowData = getLinhaData(rowToProcess);
             if (updatedRowData.CODIGO_MATERIAL && updatedRowData.ITEM_COMPONENTE) {
                 const existingDuplicateRow = encontrarLinhaDuplicada(updatedRowData.CODIGO_MATERIAL, updatedRowData.ITEM_COMPONENTE, rowToProcess);
@@ -1156,37 +772,54 @@ async function handlePasteMultipleLines(event) {
                     }
                     if (rowToProcess.parentNode) rowToProcess.remove();
                     itemsPastedCount++;
-                } else {
-                    itemsPastedCount++;
-                }
-            } else {
-                itemsPastedCount++;
-            }
+                } else { itemsPastedCount++; }
+            } else { itemsPastedCount++; }
         }
         acaoImportouOuAdicionouLinhas();
     }
 }
-
 
 // ===================================================================================
 // --- FUNÇÕES DE SALVAMENTO AUTOMÁTICO E RESTAURAÇÃO DE SESSÃO ---
 // ===================================================================================
 
 /**
- * Salva o estado atual da tabela no localStorage do navegador a cada 15 minutos.
- * Isso acontece silenciosamente em segundo plano.
+ * Atualiza o horário do último backup exibido na tela.
+ * @param {Date|string|null} timestamp - O objeto Date ou a string da data do último backup.
+ */
+function atualizarHorarioBackupDisplay(timestamp) {
+    const horarioElement = document.getElementById('ultimo-backup-horario');
+    if (horarioElement) {
+        if (timestamp) {
+            const horarioFormatado = new Date(timestamp).toLocaleTimeString('pt-BR');
+            horarioElement.textContent = horarioFormatado;
+        } else {
+            horarioElement.textContent = '--:--:--';
+        }
+    }
+}
+
+/**
+ * Salva o estado atual da tabela e o timestamp no localStorage.
  */
 function salvarEstadoLocalmente() {
     const linhas = Array.from(tabela.rows);
     if (linhas.length === 0) {
         localStorage.removeItem('listaTecnicaAutoSave');
+        atualizarHorarioBackupDisplay(null);
         return;
     }
-    const dadosTabela = linhas.map(row => getLinhaData(row));
-    localStorage.setItem('listaTecnicaAutoSave', JSON.stringify(dadosTabela));
-    console.log("Progresso salvo automaticamente às " + new Date().toLocaleTimeString());
 
-    // Notificação sutil de que foi salvo (toast).
+    const dadosTabela = linhas.map(row => getLinhaData(row));
+
+    const dadosComTimestamp = {
+        timestamp: new Date(),
+        data: dadosTabela
+    };
+
+    localStorage.setItem('listaTecnicaAutoSave', JSON.stringify(dadosComTimestamp));
+    atualizarHorarioBackupDisplay(dadosComTimestamp.timestamp);
+
     const Toast = Swal.mixin({
         toast: true,
         position: 'top-end',
@@ -1205,11 +838,25 @@ function salvarEstadoLocalmente() {
 }
 
 /**
- * Gerencia o fluxo de inicialização da aplicação, perguntando ao usuário
- * como ele deseja começar: restaurando uma sessão, importando um arquivo ou criando uma nova lista.
+ * Gerencia o fluxo de inicialização da aplicação, lendo o estado salvo
+ * e oferecendo opções ao usuário.
  */
 async function gerenciarInicializacao() {
-    const dadosSalvos = localStorage.getItem('listaTecnicaAutoSave');
+    const dadosSalvosJSON = localStorage.getItem('listaTecnicaAutoSave');
+    let dadosSalvos = null;
+    let ultimoBackupTimestamp = null;
+
+    if (dadosSalvosJSON) {
+        const objetoSalvo = JSON.parse(dadosSalvosJSON);
+        if (objetoSalvo.data && objetoSalvo.timestamp) {
+            dadosSalvos = objetoSalvo.data;
+            ultimoBackupTimestamp = objetoSalvo.timestamp;
+        } else {
+            dadosSalvos = objetoSalvo; // Fallback para formato antigo
+        }
+    }
+
+    atualizarHorarioBackupDisplay(ultimoBackupTimestamp);
 
     try {
         if (dadosSalvos) {
@@ -1232,8 +879,7 @@ async function gerenciarInicializacao() {
 
             if (result.isConfirmed) {
                 tabela.innerHTML = "";
-                const dadosTabela = JSON.parse(dadosSalvos);
-                dadosTabela.forEach(rowData => tabela.appendChild(criarLinha(rowData)));
+                dadosSalvos.forEach(rowData => tabela.appendChild(criarLinha(rowData)));
                 acaoImportouOuAdicionouLinhas();
                 Swal.fire('Restaurado!', 'Sua sessão anterior foi carregada.', 'success');
             } else if (result.isDenied) {
@@ -1244,6 +890,7 @@ async function gerenciarInicializacao() {
                 }
             } else if (result.dismiss === Swal.DismissReason.cancel) {
                 localStorage.removeItem('listaTecnicaAutoSave');
+                atualizarHorarioBackupDisplay(null);
                 tabela.innerHTML = "";
                 criar10Linhas();
                 acaoImportouOuAdicionouLinhas();
@@ -1302,50 +949,16 @@ function configurarInterfaceETimers() {
     document.getElementById("toggleNivelColBtn").innerHTML = '<span class="material-symbols-outlined">layers</span> NÍVEL';
     document.getElementById("toggleHoverEffectBtn").innerHTML = '<span class="material-symbols-outlined">straighten</span> Régua';
 
-    // ATIVA O SALVAMENTO AUTOMÁTICO (30 minutos = 1.800.000 ms de 15 em 15 minutos é 900000 15 minutos * 60 segundos/minuto * 1000 milissegundos/segundo = 900.000)
-    setInterval(salvarEstadoLocalmente, 900000);
+    setInterval(salvarEstadoLocalmente, 900000); // 15 minutos
     console.log("Sistema de salvamento automático ativado (a cada 15 minutos).");
-
-    /*notas
-
-    * As principais características são:
-
-    * É Privado e Seguro: Esses dados ficam salvos apenas no seu computador, dentro do seu navegador.
-     Eles não são enviados para a internet ou para qualquer servidor. Ninguém além de você
-      (ou alguém usando seu computador e seu perfil no navegador) tem acesso a eles.
-
-    * É Persistente: Os dados continuam lá mesmo que você feche a aba ou reinicie o computador.
-    Eles só são removidos se você escolher a opção "Criar Nova Lista" (como programamos) ou
-    se você limpar os dados de navegação do seu navegador.
-
-    * É Específico do Site: O armazenamento local que a sua aplicação usa só pode ser acessado por ela mesma.
-    Outros sites não podem ver ou mexer nos seus dados salvos.
-
-    * Como Visualizar os Dados Salvos (Opcional)
-    Se tiver curiosidade, você pode ver esses dados facilmente:
-
-    * Abra sua aplicação no navegador. Pressione a tecla F12 para abrir as "Ferramentas de Desenvolvedor".
-
-    * Procure por uma aba chamada "Application" (ou "Aplicação" em português).
-
-    * No menu à esquerda, expanda a opção "Local Storage" (ou "Armazenamento Local").
-
-    * Clique no endereço da sua página (se estiver rodando de um arquivo local, será algo como file://).
-
-    * Você verá uma tabela com uma chave (listaTecnicaAutoSave) e um valor, que será uma longa
-    sequência de texto (em formato JSON) representando todos os dados da sua tabela.
-    */
 }
 
 // ===================================================================================
 // --- FIM:FUNÇÕES DE SALVAMENTO AUTOMÁTICO E RESTAURAÇÃO DE SESSÃO ---
 // ===================================================================================
 
-
-// --- Inicialização da Aplicação ---
 /**
  * Listener de Inicialização da Aplicação.
  * Chama a nova função de gerenciamento que oferece opções ao usuário.
- * O bloco original foi substituído por este novo sistema.
  */
 document.addEventListener("DOMContentLoaded", gerenciarInicializacao);
