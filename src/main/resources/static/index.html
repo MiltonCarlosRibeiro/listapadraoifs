@@ -9,12 +9,20 @@
     <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
 </head>
 <body>
+
+<div class="top-container">
+    <div id="clock"></div>
+    <div id="editable-banner" contenteditable="true">
+        Clique para editar uma mensagem ou anotação aqui...
+    </div>
+</div>
+
 <div class="container">
     <header>
         <img src="assets/logo.png" alt="Logo Pakmatic" class="logo">
         <h1><span class="material-symbols-outlined">list_alt</span> Lista Técnica - Padrão IFS</h1>
         <div class="header-info">
-            <button id="buscarItemBtn" class="header-btn" title="Buscar Item">
+            <button id="buscarItemBtn" class="header-btn" title="Buscar Item (Ctrl+M)">
                 <span class="material-symbols-outlined">search</span>
             </button>
             <button id="theme-toggle" class="theme-btn">🌙</button>
@@ -26,18 +34,18 @@
     </header>
 
     <div class="button-bar">
-        <button id="criarListaBtn"><span class="material-symbols-outlined">add_box</span> Criar Nova Lista</button>
-        <label for="inputFile" class="file-label styled-importar">
+        <button id="criarListaBtn" title="Ctrl + N"><span class="material-symbols-outlined">add_box</span> Criar Nova Lista</button>
+        <label for="inputFile" class="file-label styled-importar" title="Ctrl + I">
             <span class="material-symbols-outlined">download</span> Importar Lista
             <input type="file" id="inputFile" accept=".xlsx, .xls" style="display: none;">
         </label>
-        <button id="continuarListaBtn"><span class="material-symbols-outlined">add_task</span> Continuar Lista</button>
-        <button id="salvarListaBtn"><span class="material-symbols-outlined">save</span> Salvar Lista</button>
+        <button id="continuarListaBtn" title="Ctrl + R"><span class="material-symbols-outlined">add_task</span> Continuar Lista</button>
+        <button id="salvarListaBtn" title="Ctrl + '"><span class="material-symbols-outlined">save</span> Salvar Lista</button>
         <button id="copiarSelecionadoBtn"><span class="material-symbols-outlined">content_copy</span> Copiar Selecionado</button>
         <button id="colarBtn"><span class="material-symbols-outlined">content_paste</span> Colar</button>
-        <button id="deletarSelecionadosBtn"><span class="material-symbols-outlined">delete</span> Deletar Selecionados</button>
-        <button id="inserirAcimaBtn"><span class="material-symbols-outlined">arrow_circle_up</span> Inserir Acima</button>
-        <button id="inserirAbaixoBtn"><span class="material-symbols-outlined">arrow_circle_down</span> Inserir Abaixo</button>
+        <button id="deletarSelecionadosBtn" title="Ctrl + X"><span class="material-symbols-outlined">delete</span> Deletar Selecionados</button>
+        <button id="inserirAcimaBtn" title="Ctrl + Shift + Seta para Cima"><span class="material-symbols-outlined">arrow_circle_up</span> Inserir Acima</button>
+        <button id="inserirAbaixoBtn" title="Ctrl + Shift + Seta para Baixo"><span class="material-symbols-outlined">arrow_circle_down</span> Inserir Abaixo</button>
         <button id="toggleSeqBtn"><span class="material-symbols-outlined">visibility</span> SEQ</button>
         <button id="toggleNivelColBtn"><span class="material-symbols-outlined">layers</span> NÍVEL</button>
         <button id="toggleHoverEffectBtn"><span class="material-symbols-outlined">straighten</span> Régua</button>
@@ -46,8 +54,7 @@
 
     <div class="painting-controls">
         <h3><span class="material-symbols-outlined">palette</span> Ferramentas de Demarcação</h3>
-        <div id="nivelColorButtons">
-        </div>
+        <div id="nivelColorButtons"></div>
         <div id="attentionColorButtons">
             <button class="paint-btn attention-yellow" data-color="#FFBF00"><span class="material-symbols-outlined">warning</span> Atenção</button>
             <button class="paint-btn attention-green" data-color="#28A745"><span class="material-symbols-outlined">check_circle</span> OK</button>
@@ -62,8 +69,7 @@
 
     <div class="filter-controls">
         <h3><span class="material-symbols-outlined">filter_alt</span> Filtrar por Nível</h3>
-        <div id="checkboxNiveis">
-        </div>
+        <div id="checkboxNiveis"></div>
         <button id="limparFiltroNivelBtn">Limpar Filtro</button>
     </div>
 
@@ -98,8 +104,7 @@
         </header>
         <div class="modal-body">
             <input type="text" id="inputBuscaItem" placeholder="Digite o código ou descrição do item...">
-            <div id="resultadosBusca" class="resultados-container">
-            </div>
+            <div id="resultadosBusca" class="resultados-container"></div>
         </div>
     </div>
 </div>

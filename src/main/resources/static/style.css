@@ -2,13 +2,43 @@ body {
     font-family: Arial, sans-serif;
     background-color: #ededed;
     margin: 0;
-    padding: 20px;
+    padding: 0;
     color: #333;
+}
+
+/* [NOVO] Estilos para o Banner e Relógio no topo */
+.top-container {
+    background-color: #a31f35;
+    color: white;
+    padding: 10px 20px;
+    text-align: center;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+
+#clock {
+    font-size: 2.5rem;
+    font-weight: bold;
+    letter-spacing: 2px;
+}
+
+#editable-banner {
+    margin-top: 5px;
+    font-size: 1rem;
+    padding: 5px;
+    border: 1px dashed transparent;
+    transition: border 0.3s;
+}
+
+#editable-banner:focus {
+    outline: none;
+    border: 1px dashed #f8f8f2;
+    background-color: rgba(255, 255, 255, 0.1);
 }
 
 .container {
     max-width: 1900px;
     margin: auto;
+    padding: 20px;
 }
 
 header {
@@ -24,38 +54,32 @@ header {
 
 h1 {
     font-size: 30px;
-    margin-right: 20px; /* Adiciona um espaço à direita do título */
+    margin-right: 20px;
 }
 
-/* --- SEÇÃO DE ESTILOS DO CABEÇALHO ATUALIZADA --- */
-
-/* Agrupa os contadores e informações à direita */
 .header-info {
-    margin-left: auto; /* Joga o bloco todo para a direita */
+    margin-left: auto;
     display: flex;
     align-items: center;
-    gap: 15px; /* Espaço entre os itens */
+    gap: 15px;
 }
 
-/* Estilo genérico para os displays de informação */
 .info-display, .duplicate-count-display {
     display: flex;
     align-items: center;
-    gap: 5px; /* Espaço entre o ícone e o texto */
+    gap: 5px;
     padding: 5px 10px;
     border-radius: 5px;
     font-size: 14px;
     font-weight: bold;
 }
 
-/* Estilo específico para o display de backup */
 .info-display {
     background-color: #f0f0f0;
 }
 
-/* Estilo específico para o contador de duplicatas */
 .duplicate-count-display {
-    background-color: #f44336; /* Vermelho */
+    background-color: #f44336;
     color: white;
 }
 
@@ -63,23 +87,12 @@ h1 {
     font-size: 18px;
 }
 
-/* --- FIM DA SEÇÃO ATUALIZADA --- */
-
-
-/* Material Symbols Adjustments */
-h1 .material-symbols-outlined {
-    font-size: 30px; /* Match h1 font size */
+h1 .material-symbols-outlined, .button-bar button .material-symbols-outlined,
+.file-label .material-symbols-outlined, .painting-controls h3 .material-symbols-outlined,
+.painting-controls .paint-btn .material-symbols-outlined, .filter-controls h3 .material-symbols-outlined {
+    font-size: 20px;
     vertical-align: middle;
-}
-
-.button-bar button .material-symbols-outlined,
-.file-label .material-symbols-outlined,
-.painting-controls h3 .material-symbols-outlined,
-.painting-controls .paint-btn .material-symbols-outlined,
-.filter-controls h3 .material-symbols-outlined {
-    font-size: 20px; /* Default icon size for buttons/labels */
-    vertical-align: middle;
-    margin-right: 5px; /* Space between icon and text */
+    margin-right: 5px;
 }
 
 .button-bar {
@@ -89,8 +102,7 @@ h1 .material-symbols-outlined {
     margin-bottom: 20px;
 }
 
-.button-bar button,
-.file-label {
+.button-bar button, .file-label {
     background-color:#a31f35;
     color: #fff;
     border: none;
@@ -101,21 +113,18 @@ h1 .material-symbols-outlined {
     font-weight: bold;
 }
 
-.button-bar button:hover,
-.file-label:hover {
+.button-bar button:hover, .file-label:hover {
     background-color: #7d7c7c;
 }
 
-/* Botões de Busca de Duplicatas */
 .find-duplicates-btn {
-    background-color: #4CAF50; /* Verde */
+    background-color: #4CAF50;
 }
 .find-duplicates-btn:hover {
-    background-color: #45a049; /* Verde mais escuro */
+    background-color: #45a049;
 }
 
-/* Controles de Pintura */
-.painting-controls {
+.painting-controls, .filter-controls {
     margin-top: 15px;
     padding: 15px;
     background-color: #fffcfd;
@@ -127,15 +136,18 @@ h1 .material-symbols-outlined {
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
-.painting-controls h3 {
+.filter-controls {
+    gap: 15px;
+}
+
+.painting-controls h3, .filter-controls h3 {
     width: 100%;
     margin-top: 0;
     margin-bottom: 10px;
     color: #121212;
 }
 
-#nivelColorButtons,
-#attentionColorButtons {
+#nivelColorButtons, #attentionColorButtons {
     display: flex;
     flex-wrap: wrap;
     gap: 5px;
@@ -145,33 +157,11 @@ h1 .material-symbols-outlined {
     padding: 8px 12px;
     border-radius: 4px;
     font-weight: bold;
-    color: black;
 }
 
-/* Cores de Atenção */
 .attention-yellow { background-color: #FFBF00; color: black; }
 .attention-green { background-color: #28A745; color: white; }
 .attention-red { background-color: #DC3545; color: white; }
-
-/* Controles de Filtro */
-.filter-controls {
-    margin-top: 20px;
-    padding: 15px;
-    background-color: #fcfcfc;
-    border-radius: 8px;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 15px;
-    align-items: center;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-
-.filter-controls h3 {
-    width: 100%;
-    margin-top: 0;
-    margin-bottom: 10px;
-    color: #000000;
-}
 
 #checkboxNiveis {
     display: flex;
@@ -179,17 +169,29 @@ h1 .material-symbols-outlined {
     gap: 10px;
 }
 
-#checkboxNiveis label {
+/* [NOVO] Estilos para os contadores de nível */
+.filter-level-item {
     display: flex;
     align-items: center;
     gap: 5px;
-    font-size: 14px;
+    padding: 2px 5px;
+    border-radius: 4px;
+}
+
+.level-count {
+    font-size: 0.8em;
+    font-weight: bold;
+    background-color: #e0e0e0;
+    color: #333;
+    padding: 2px 6px;
+    border-radius: 10px;
+    min-width: 12px;
+    text-align: center;
 }
 
 #limparFiltroNivelBtn {
     background-color: #d7d8d9;
 }
-
 #limparFiltroNivelBtn:hover {
     background-color: #e6e7e8;
 }
@@ -230,9 +232,7 @@ tbody tr:nth-child(even) {
     background-color: #f9f9f9;
 }
 
-td input[type="text"],
-td input[type="number"],
-td select {
+td input[type="text"], td input[type="number"], td select {
     width: 100%;
     padding: 6px;
     box-sizing: border-box;
@@ -241,16 +241,13 @@ td select {
     font-size: 13px;
 }
 
-td input[type="text"]:focus,
-td input[type="number"]:focus,
-td select:focus {
+td input[type="text"]:focus, td input[type="number"]:focus, td select:focus {
     outline: none;
     border-color: #673ab7;
     box-shadow: 0 0 0 2px rgba(103, 58, 183, 0.2);
 }
 
-input[type=number]::-webkit-inner-spin-button,
-input[type=number]::-webkit-outer-spin-button {
+input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button {
     -webkit-appearance: none;
     margin: 0;
 }
@@ -258,30 +255,10 @@ input[type=number] {
     -moz-appearance: textfield;
 }
 
-th:nth-child(1), td:nth-child(1) {
-    width: 30px;
-    text-align: center;
-    padding: 8px 5px;
-}
-
-th.seq-col, td.seq-col {
-    width: 60px;
-    text-align: center;
-    background-color: #f2f2f2;
-}
-
-td.seq-col {
-    background-color: #f9f9f9;
-    font-weight: bold;
-    color: #555;
-}
-
-th.nivel-col, td.nivel-col {
-    width: 80px;
-    text-align: center;
-    background-color: #f2f2f2;
-}
-
+th:nth-child(1), td:nth-child(1) { width: 30px; text-align: center; padding: 8px 5px; }
+th.seq-col, td.seq-col { width: 60px; text-align: center; background-color: #f2f2f2; }
+td.seq-col { background-color: #f9f9f9; font-weight: bold; color: #555; }
+th.nivel-col, td.nivel-col { width: 80px; text-align: center; background-color: #f2f2f2; }
 th:nth-child(4), td:nth-child(4) { width: 50px; }
 th:nth-child(6), td:nth-child(6) { width: 350px; }
 th:nth-child(8), td:nth-child(8) { width: 60px; }
@@ -291,380 +268,91 @@ th:nth-child(7), td:nth-child(7) { width: 120px; }
 th:nth-child(9), td:nth-child(9) { width: 180px; }
 th:nth-child(11), td:nth-child(11) { width: 100px; }
 th:nth-child(12), td:nth-child(12) { width: 100px; }
-
-.nivel-1 { background-color: #4664cf !important; }
-.nivel-2 { background-color: #CD5C5C !important; }
-.nivel-3 { background-color: #B3E6B3 !important; }
-.nivel-4 { background-color: #FFD700 !important; }
-.nivel-5 { background-color: #8A2BE2 !important; }
-.nivel-6 { background-color: #FF8C00 !important; }
-.nivel-7 { background-color: #00CED1 !important; }
-.nivel-8 { background-color: #FF69B4 !important; }
-.nivel-9 { background-color: #9ACD32 !important; }
-.nivel-10 { background-color: #DA70D6 !important; }
-
-.highlight-duplicate {
-    background-color: #ff0000 !important;
-}
-
-.seq-col-hidden th.seq-col,
-.seq-col-hidden td.seq-col {
-    display: none;
-}
-
-.nivel-col-hidden th.nivel-col,
-.nivel-col-hidden td.nivel-col {
-    display: none;
-}
-
-.hover-effect tbody tr:hover {
-    background-color: #ffe0b2 !important;
-    outline: 1px solid #ffcc80;
-}
-
-.no-hover-effect tbody tr:hover {
-    background-color: initial !important;
-    outline: none !important;
-}
-
-@media (max-width: 768px) {
-    .table-container {
-        overflow-x: auto;
-    }
-
-    th, td {
-        padding: 6px 8px;
-    }
-
-    th:nth-child(4), td:nth-child(4) { width: 40px; }
-    th:nth-child(6), td:nth-child(6) { width: 200px; }
-    th:nth-child(8), td:nth-child(8) { width: 50px; }
-    th:nth-child(10), td:nth-child(10) { width: 100px; }
-
-    th.seq-col, td.seq-col { width: 50px; }
-    th.nivel-col, td.nivel-col { width: 70px; }
-}
-
-.painting-controls, .filter-controls {
-    display: flex;
-    flex-direction: row;
-    align-items: flex-start;
-    gap: 15px;
-}
-
-.painting-controls > div, .filter-controls > div {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    align-items: center;
-}
-
-.painting-controls h3, .filter-controls h3 {
-    flex-basis: 100%;
-    margin-bottom: 10px;
-}
-
-.painting-controls .paint-btn,
-.filter-controls button,
-.filter-controls label {
-    margin-right: 5px;
-}
-
-#listaTabela tbody.table-faded tr {
-    opacity: 0.2;
-    transition: opacity 0.3s ease-in-out;
-}
-
-#listaTabela tbody tr.highlight-focused-item {
-    opacity: 1 !important;
-    transition: opacity 0.3s ease-in-out;
-    box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
-    position: relative;
-    z-index: 20;
-}
-
-.temp-highlight-found {
-    animation: flash-found 1s 3;
-}
-
-@keyframes flash-found {
-    0% { background-color: #f0e6ff; }
-    50% { background-color: #99FFFF; }
-    100% { background-color: #f0e6ff; }
-}
-
-.no-highlight-on-ignore {
-    background-color: transparent !important;
-}
+.nivel-1 { background-color: #4664cf !important; } .nivel-2 { background-color: #CD5C5C !important; }
+.nivel-3 { background-color: #B3E6B3 !important; } .nivel-4 { background-color: #FFD700 !important; }
+.nivel-5 { background-color: #8A2BE2 !important; } .nivel-6 { background-color: #FF8C00 !important; }
+.nivel-7 { background-color: #00CED1 !important; } .nivel-8 { background-color: #FF69B4 !important; }
+.nivel-9 { background-color: #9ACD32 !important; } .nivel-10 { background-color: #DA70D6 !important; }
+.highlight-duplicate { background-color: #ff0000 !important; }
+.seq-col-hidden th.seq-col, .seq-col-hidden td.seq-col { display: none; }
+.nivel-col-hidden th.nivel-col, .nivel-col-hidden td.nivel-col { display: none; }
+.hover-effect tbody tr:hover { background-color: #ffe0b2 !important; outline: 1px solid #ffcc80; }
+.no-hover-effect tbody tr:hover { background-color: initial !important; outline: none !important; }
+#listaTabela tbody.table-faded tr { opacity: 0.2; transition: opacity 0.3s ease-in-out; }
+#listaTabela tbody tr.highlight-focused-item { opacity: 1 !important; transition: opacity 0.3s ease-in-out; box-shadow: 0 0 15px rgba(0, 0, 0, 0.5); position: relative; z-index: 20; }
+.temp-highlight-found { animation: flash-found 1s 3; }
+@keyframes flash-found { 0% { background-color: #f0e6ff; } 50% { background-color: #99FFFF; } 100% { background-color: #f0e6ff; } }
+.no-highlight-on-ignore { background-color: transparent !important; }
 
 /* --- TEMA DRACULA (MODO ESCURO) --- */
-
-/* 1. Definição das variáveis de cor Dracula */
 body.dark-mode {
-    --bg-color: #282a36;
-    --text-color: #f8f8f2;
-    --header-bg: #1f212b; /* Um pouco mais escuro que o fundo principal */
-    --container-bg: #282a36;
-    --controls-bg: #44475a; /* Fundo para painéis de controle */
-    --table-bg: #282a36;
-    --table-border: #6272a4; /* Cor de comentário para bordas */
-    --table-header-bg: #44475a;
-    --table-row-even-bg: #2f3240; /* Fundo de linha par sutilmente diferente */
-    --input-bg: #21222C;
-    --input-border: #6272a4;
-    --input-focus-shadow: rgba(189, 147, 249, 0.4); /* Sombra roxa ao focar */
-    --main-btn-bg: #a31f35; /* Mantendo o vermelho da marca */
-    --main-btn-hover-bg: #c52640;
-    --green-btn-bg: #50fa7b;
-    --green-btn-hover-bg: #67ff92;
-    --green-btn-text: #282a36; /* Texto escuro para botões verdes claros */
-    --purple-text: #bd93f9;
-    --cyan-text: #8be9fd;
-    --orange-text: #ffb86c;
-    --yellow-text: #f1fa8c;
-    --pink-text: #ff79c6;
-    --hover-effect-bg: #44475a !important; /* Cor de hover Dracula */
-    --hover-effect-outline: #bd93f9;
-    --duplicate-highlight-bg: #ff5555 !important; /* Vermelho Dracula */
-    --faded-opacity: 0.3;
+    --bg-color: #22242d; /* [ALTERADO] Tom de preto mais opaco */
+    --text-color: #f8f8f2; --header-bg: #1f212b; --container-bg: #282a36;
+    --controls-bg: #44475a; --table-bg: #282a36; --table-border: #6272a4;
+    --table-header-bg: #44475a; --table-row-even-bg: #2f3240; --input-bg: #21222C;
+    --input-border: #6272a4; --input-focus-shadow: rgba(189, 147, 249, 0.4);
+    --main-btn-bg: #a31f35; --main-btn-hover-bg: #c52640; --green-btn-bg: #50fa7b;
+    --green-btn-hover-bg: #67ff92; --green-btn-text: #282a36; --purple-text: #bd93f9;
+    --cyan-text: #8be9fd; --orange-text: #ffb86c; --yellow-text: #f1fa8c;
+    --pink-text: #ff79c6; --hover-effect-bg: #44475a !important; --hover-effect-outline: #bd93f9;
+    --duplicate-highlight-bg: #ff5555 !important; --faded-opacity: 0.3;
 }
+body.dark-mode { background-color: var(--bg-color); color: var(--text-color); }
+body.dark-mode .logo { background-color: #f8f8f2; border-radius: 5px; padding: 2px; }
+body.dark-mode .top-container { background-color: #1e1f26; border-bottom: 1px solid var(--table-border); }
+body.dark-mode h1 { color: var(--cyan-text); }
+body.dark-mode h3 { color: var(--orange-text); }
+body.dark-mode .header-info .info-display { background-color: var(--controls-bg); color: var(--text-color); border: 1px solid var(--table-border); }
+body.dark-mode .painting-controls, body.dark-mode .filter-controls { background-color: var(--controls-bg); box-shadow: 0 2px 4px rgba(0,0,0,0.2); border: 1px solid var(--table-border); }
+body.dark-mode .level-count { background-color: var(--table-header-bg); color: var(--yellow-text); }
+body.dark-mode .button-bar button, body.dark-mode .file-label { background-color: var(--main-btn-bg); }
+body.dark-mode .button-bar button:hover, body.dark-mode .file-label:hover { background-color: var(--main-btn-hover-bg); }
+body.dark-mode .find-duplicates-btn { background-color: var(--green-btn-bg); color: var(--green-btn-text); }
+body.dark-mode .find-duplicates-btn:hover { background-color: var(--green-btn-hover-bg); }
+body.dark-mode #limparFiltroNivelBtn { background-color: #6272a4; color: var(--text-color); }
+body.dark-mode #limparFiltroNivelBtn:hover { background-color: #798bc2; }
+body.dark-mode .table-container { border: 1px solid var(--table-border); box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+body.dark-mode table { background-color: var(--table-bg); }
+body.dark-mode th, body.dark-mode td { border: 1px solid var(--table-border); }
+body.dark-mode th { background-color: var(--table-header-bg); color: var(--text-color); }
+body.dark-mode tbody tr:nth-child(even) { background-color: var(--table-row-even-bg); }
+body.dark-mode td input[type="text"], body.dark-mode td input[type="number"], body.dark-mode td select { background-color: var(--input-bg); border: 1px solid var(--input-border); color: var(--text-color); border-radius: 4px; }
+body.dark-mode td input[type="text"]:focus, body.dark-mode td input[type="number"]:focus, body.dark-mode td select:focus { border-color: var(--purple-text); box-shadow: 0 0 0 2px var(--input-focus-shadow); }
+body.dark-mode th.seq-col, body.dark-mode td.seq-col, body.dark-mode th.nivel-col, body.dark-mode td.nivel-col { background-color: var(--table-header-bg); }
+body.dark-mode td.seq-col { background-color: var(--table-row-even-bg); color: var(--yellow-text); }
+body.dark-mode .highlight-duplicate { background-color: var(--duplicate-highlight-bg); }
+body.dark-mode .hover-effect tbody tr:hover { background-color: var(--hover-effect-bg); outline: 1px solid var(--hover-effect-outline); }
+body.dark-mode #listaTabela tbody.table-faded tr { opacity: var(--faded-opacity); }
+body.dark-mode .temp-highlight-found { animation: flash-found-dark 1s 3; }
+@keyframes flash-found-dark { 0% { background-color: var(--controls-bg); } 50% { background-color: var(--purple-text); color: #282a36; } 100% { background-color: var(--controls-bg); } }
 
-/* 2. Aplicação dos estilos do modo escuro */
-
-/* Geral */
-body.dark-mode {
-    background-color: var(--bg-color);
-    color: var(--text-color);
-}
-
-body.dark-mode .logo {
-    background-color: #f8f8f2; /* Adiciona um fundo claro ao logo para manter a visibilidade */
-    border-radius: 5px;
-    padding: 2px;
-}
-
-body.dark-mode h1 {
-    color: var(--cyan-text);
-}
-
-body.dark-mode h3 {
-    color: var(--orange-text);
-}
-
-/* Cabeçalho */
-body.dark-mode .header-info .info-display {
-    background-color: var(--controls-bg);
-    color: var(--text-color);
-    border: 1px solid var(--table-border);
-}
-
-/* Controles e Botões */
-body.dark-mode .painting-controls,
-body.dark-mode .filter-controls {
-    background-color: var(--controls-bg);
-    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-    border: 1px solid var(--table-border);
-}
-
-body.dark-mode .button-bar button,
-body.dark-mode .file-label {
-    background-color: var(--main-btn-bg);
-}
-body.dark-mode .button-bar button:hover,
-body.dark-mode .file-label:hover {
-    background-color: var(--main-btn-hover-bg);
-}
-
-body.dark-mode .find-duplicates-btn {
-    background-color: var(--green-btn-bg);
-    color: var(--green-btn-text);
-}
-body.dark-mode .find-duplicates-btn:hover {
-    background-color: var(--green-btn-hover-bg);
-}
-
-body.dark-mode #limparFiltroNivelBtn {
-    background-color: #6272a4;
-    color: var(--text-color);
-}
-body.dark-mode #limparFiltroNivelBtn:hover {
-    background-color: #798bc2;
-}
-
-
-/* Tabela */
-body.dark-mode .table-container {
-    border: 1px solid var(--table-border);
-    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-}
-
-body.dark-mode table {
-    background-color: var(--table-bg);
-}
-
-body.dark-mode th,
-body.dark-mode td {
-    border: 1px solid var(--table-border);
-}
-
-body.dark-mode th {
-    background-color: var(--table-header-bg);
-    color: var(--text-color);
-}
-
-body.dark-mode tbody tr:nth-child(even) {
-    background-color: var(--table-row-even-bg);
-}
-
-body.dark-mode td input[type="text"],
-body.dark-mode td input[type="number"],
-body.dark-mode td select {
-    background-color: var(--input-bg);
-    border: 1px solid var(--input-border);
-    color: var(--text-color);
-    border-radius: 4px;
-}
-
-body.dark-mode td input[type="text"]:focus,
-body.dark-mode td input[type="number"]:focus,
-body.dark-mode td select:focus {
-    border-color: var(--purple-text);
-    box-shadow: 0 0 0 2px var(--input-focus-shadow);
-}
-
-body.dark-mode th.seq-col,
-body.dark-mode td.seq-col,
-body.dark-mode th.nivel-col,
-body.dark-mode td.nivel-col {
-    background-color: var(--table-header-bg);
-}
-body.dark-mode td.seq-col {
-    background-color: var(--table-row-even-bg);
-    color: var(--yellow-text);
-}
-
-/* Destaques e Efeitos */
-body.dark-mode .highlight-duplicate {
-    background-color: var(--duplicate-highlight-bg);
-}
-
-body.dark-mode .hover-effect tbody tr:hover {
-    background-color: var(--hover-effect-bg);
-    outline: 1px solid var(--hover-effect-outline);
-}
-
-body.dark-mode #listaTabela tbody.table-faded tr {
-    opacity: var(--faded-opacity);
-}
-
-body.dark-mode .temp-highlight-found {
-    animation: flash-found-dark 1s 3;
-}
-
-@keyframes flash-found-dark {
-    0% { background-color: var(--controls-bg); }
-    50% { background-color: var(--purple-text); color: #282a36; }
-    100% { background-color: var(--controls-bg); }
-}
-
-/* Estilo do botão do tema */
-.theme-btn {
-    background: none;
-    border: 1px solid #ccc;
-    border-radius: 5px;
-    padding: 5px 10px;
-    font-size: 1.5rem;
-    cursor: pointer;
-    line-height: 1;
-    transition: background-color 0.3s, border-color 0.3s;
-}
-
-body.dark-mode .theme-btn {
-    border-color: var(--table-border);
-    color: var(--text-color);
-}
-
-
-/* [NOVO] ESTILOS PARA BUSCA DE MATERIAIS E MODAL */
-.header-btn {
-    background: none;
-    border: 1px solid #ccc;
-    border-radius: 5px;
-    padding: 5px;
-    font-size: 1.5rem;
-    cursor: pointer;
-    line-height: 1;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    transition: background-color 0.3s, border-color 0.3s;
-    color: #333;
-}
-.header-btn .material-symbols-outlined {
-    font-size: 24px;
-}
-
-.modal-overlay {
-    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-    background-color: rgba(0, 0, 0, 0.6); display: flex;
-    justify-content: center; align-items: center; z-index: 1000;
-}
-.modal-content {
-    background-color: #fff; border-radius: 8px; width: 90%;
-    max-width: 800px; max-height: 90vh; display: flex;
-    flex-direction: column; box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-}
-.modal-header {
-    padding: 15px 20px; border-bottom: 1px solid #ddd;
-    display: flex; justify-content: space-between; align-items: center;
-}
-.modal-header h2 {
-    margin: 0; font-size: 1.25rem; display: flex; align-items: center; gap: 10px;
-}
-.modal-close-btn {
-    background: none; border: none; font-size: 2rem;
-    cursor: pointer; line-height: 1; padding: 0;
-}
-.modal-body {
-    padding: 20px; overflow-y: auto; display: flex; flex-direction: column;
-}
-#inputBuscaItem {
-    width: 100%; padding: 12px; font-size: 1rem; margin-bottom: 15px;
-    box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px;
-}
-.resultados-container {
-    flex-grow: 1; overflow-y: auto; border: 1px solid #ddd;
-    border-radius: 4px; min-height: 200px;
-}
-.resultado-item {
-    display: flex; justify-content: space-between; align-items: center;
-    padding: 10px; border-bottom: 1px solid #eee;
-}
+/* Estilos para busca e modal */
+.header-btn, .theme-btn { background: none; border: 1px solid #ccc; border-radius: 5px; padding: 5px; font-size: 1.5rem; cursor: pointer; line-height: 1; display: inline-flex; align-items: center; justify-content: center; transition: background-color 0.3s, border-color 0.3s; color: #333; }
+.header-btn .material-symbols-outlined, .theme-btn .material-symbols-outlined { font-size: 24px; }
+.modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.6); display: flex; justify-content: center; align-items: center; z-index: 1000; }
+.modal-content { background-color: #fff; border-radius: 8px; width: 90%; max-width: 800px; max-height: 90vh; display: flex; flex-direction: column; box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
+.modal-header { padding: 15px 20px; border-bottom: 1px solid #ddd; display: flex; justify-content: space-between; align-items: center; }
+.modal-header h2 { margin: 0; font-size: 1.25rem; display: flex; align-items: center; gap: 10px; }
+.modal-close-btn { background: none; border: none; font-size: 2rem; cursor: pointer; line-height: 1; padding: 0; }
+.modal-body { padding: 20px; overflow-y: auto; display: flex; flex-direction: column; }
+#inputBuscaItem { width: 100%; padding: 12px; font-size: 1rem; margin-bottom: 15px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
+.resultados-container { flex-grow: 1; overflow-y: auto; border: 1px solid #ddd; border-radius: 4px; min-height: 200px; }
+.resultado-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid #eee; }
 .resultado-item:last-child { border-bottom: none; }
 .resultado-item .info { flex-grow: 1; margin-right: 15px; }
 .resultado-item .info strong { display: block; font-size: 0.9rem; color: #333; }
 .resultado-item .info span { font-size: 0.8rem; color: #666; }
-.resultado-item .copiar-item-btn {
-    padding: 5px 10px; font-size: 0.8rem; cursor: pointer; background-color: #007bff;
-    color: white; border: none; border-radius: 4px; transition: background-color 0.2s;
-    min-width: 70px;
-}
+.resultado-item .copiar-item-btn { padding: 5px 10px; font-size: 0.8rem; cursor: pointer; background-color: #007bff; color: white; border: none; border-radius: 4px; transition: background-color 0.2s; min-width: 70px; }
 .resultado-item .copiar-item-btn.copiado { background-color: #28a745; }
 
 /* Adaptações do Modal para o Tema Escuro */
-body.dark-mode .header-btn, body.dark-mode .theme-btn {
-    border-color: var(--table-border); color: var(--text-color);
-}
-body.dark-mode .header-btn:hover, body.dark-mode .theme-btn:hover {
-    background-color: var(--controls-bg);
-}
+body.dark-mode .header-btn, body.dark-mode .theme-btn { border-color: var(--table-border); color: var(--text-color); }
+body.dark-mode .header-btn:hover, body.dark-mode .theme-btn:hover { background-color: var(--controls-bg); }
 body.dark-mode .modal-content { background-color: var(--controls-bg); border: 1px solid var(--table-border); }
 body.dark-mode .modal-header { border-bottom: 1px solid var(--table-border); }
 body.dark-mode .modal-header h2 { color: var(--cyan-text); }
 body.dark-mode .modal-close-btn { color: var(--text-color); }
-body.dark-mode #inputBuscaItem {
-    background-color: var(--input-bg); border: 1px solid var(--input-border); color: var(--text-color);
-}
+body.dark-mode #inputBuscaItem { background-color: var(--input-bg); border: 1px solid var(--input-border); color: var(--text-color); }
 body.dark-mode #inputBuscaItem:focus { border-color: var(--purple-text); box-shadow: 0 0 0 2px var(--input-focus-shadow); }
 body.dark-mode .resultados-container { border: 1px solid var(--table-border); }
 body.dark-mode .resultado-item { border-bottom: 1px solid var(--table-border); }
