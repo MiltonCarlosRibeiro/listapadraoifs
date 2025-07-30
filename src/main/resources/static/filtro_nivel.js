@@ -1,3 +1,8 @@
+/**
+ * @file filtro_nivel.js
+ * @description Gerencia a funcionalidade de filtrar as linhas da tabela pelo seu NÍVEL.
+ */
+
 function aplicarFiltroNiveis() {
     const selecionados = Array.from(document.querySelectorAll("#checkboxNiveis input:checked")).map(cb => cb.value);
     const linhas = document.querySelectorAll("#listaTabela tbody tr");
@@ -16,6 +21,7 @@ function aplicarFiltroNiveis() {
 
 function configurarFiltroNiveis() {
     const checkboxesContainer = document.getElementById("checkboxNiveis");
+    if (!checkboxesContainer) return;
     checkboxesContainer.innerHTML = '';
 
     for (let i = 1; i <= 10; i++) {
@@ -25,24 +31,32 @@ function configurarFiltroNiveis() {
         checkbox.value = String(i);
         checkbox.id = `filterNivel${i}`;
         label.appendChild(checkbox);
-        label.appendChild(document.createTextNode(`Nível ${i}`));
+        label.appendChild(document.createTextNode(` Nível ${i}`));
         checkboxesContainer.appendChild(label);
     }
 
     const checkboxes = document.querySelectorAll("#checkboxNiveis input[type=checkbox]");
-    checkboxes.forEach(cb => cb.removeEventListener("change", aplicarFiltroNiveis));
-    checkboxes.forEach(cb => cb.addEventListener("change", aplicarFiltroNiveis));
-
-    document.getElementById("limparFiltroNivelBtn").addEventListener("click", () => {
-        checkboxes.forEach(cb => cb.checked = false);
-        aplicarFiltroNiveis();
+    checkboxes.forEach(cb => {
+        cb.removeEventListener("change", aplicarFiltroNiveis);
+        cb.addEventListener("change", aplicarFiltroNiveis);
     });
 
-    document.getElementById("listaTabela").addEventListener('change', function(event) {
-        if (event.target.closest('td.nivel-col')) {
+    const limparFiltroBtn = document.getElementById("limparFiltroNivelBtn");
+    if(limparFiltroBtn) {
+        limparFiltroBtn.addEventListener("click", () => {
+            checkboxes.forEach(cb => cb.checked = false);
             aplicarFiltroNiveis();
-        }
-    });
+        });
+    }
+
+    const tabelaElement = document.getElementById("listaTabela");
+    if(tabelaElement) {
+        tabelaElement.addEventListener('change', function(event) {
+            if (event.target.closest('td.nivel-col')) {
+                aplicarFiltroNiveis();
+            }
+        });
+    }
 }
 
 function ativarFiltroAuto() {
@@ -57,3 +71,4 @@ function ativarFiltroAuto() {
 document.addEventListener("DOMContentLoaded", () => {
     ativarFiltroAuto();
 });
+// A CHAVE "}" EXTRA QUE ESTAVA AQUI FOI REMOVIDA

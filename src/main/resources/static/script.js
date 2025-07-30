@@ -1,12 +1,12 @@
 /**
  * @file script.js
  * @description Script principal para a aplicação de Lista Técnica IFS.
- * Gerencia a interação com a tabela, importação/exportação de Excel,
- * autopreenchimento de colunas, e funcionalidades de UI.
- * @version 2.1 - Adicionado display de horário do último backup local.
+ * Gerencia todas as funcionalidades da interface, incluindo listeners de botões,
+ * manipulação da tabela, tema escuro e alertas.
+ * @version 4.0 - Versão estável com todas as funcionalidades originais e tema escuro.
  */
 
-// ... (todo o seu código existente até a seção de salvamento automático)
+// Variáveis globais e de estado
 let tabela = document.getElementById("listaTabela").getElementsByTagName("tbody")[0];
 let cacheCopiado = [];
 let seqAtivo = true;
@@ -25,6 +25,9 @@ const niveis = Array.from({ length: 10 }, (_, i) => (i + 1).toString());
 let foundDuplicates = [];
 let currentDuplicateIndex = -1;
 
+/**
+ * Reseta o estado da busca e destaque de duplicatas na tabela.
+ */
 function resetDuplicateSearchState() {
     foundDuplicates = [];
     currentDuplicateIndex = -1;
@@ -37,6 +40,13 @@ function resetDuplicateSearchState() {
     verificarDuplicatas();
 }
 
+/**
+ * Encontra a primeira linha na tabela que tem a mesma combinação de código material e item componente.
+ * @param {string} codigoMaterial - O código do material a ser procurado.
+ * @param {string} itemComponente - O item componente a ser procurado.
+ * @param {HTMLTableRowElement|null} [currentRow=null] - A linha atual, para ser ignorada na busca.
+ * @returns {HTMLTableRowElement|null} A linha duplicada encontrada, ou null se não houver.
+ */
 function encontrarLinhaDuplicada(codigoMaterial, itemComponente, currentRow = null) {
     if (!codigoMaterial || !itemComponente) return null;
     const linhas = Array.from(tabela.rows);
@@ -51,6 +61,12 @@ function encontrarLinhaDuplicada(codigoMaterial, itemComponente, currentRow = nu
     return null;
 }
 
+/**
+ * Exibe um alerta SweetAlert quando uma duplicata é encontrada durante a digitação.
+ * @param {object} newData - Os dados da linha atual que está sendo editada.
+ * @param {HTMLTableRowElement} existingRow - A linha existente que é uma duplicata.
+ * @returns {Promise<'ignorar'|'cancelar'>} A ação escolhida pelo usuário.
+ */
 async function mostrarAlertaDuplicata(newData, existingRow) {
     const existingData = getLinhaData(existingRow);
     const qtdeNova = parseFloat(String(newData.QTDE_MONTAGEM).replace(',', '.')) || 0;
@@ -82,6 +98,16 @@ async function mostrarAlertaDuplicata(newData, existingRow) {
     return 'cancelar';
 }
 
+
+/**
+ * Cria e retorna um elemento de célula <td> com um <input> dentro.
+ * @param {string} type - O tipo do input (ex: "text").
+ * @param {boolean} [readOnly=false] - Define se o campo é somente leitura.
+ * @param {string} [value=""] - O valor inicial do campo.
+ * @param {boolean} [isPasteTarget=false] - Indica se é um alvo para colagem.
+ * @param {string} [className=""] - Classes CSS para adicionar ao <td>.
+ * @returns {HTMLTableCellElement} O elemento <td> criado.
+ */
 function inputCell(type, readOnly = false, value = "", isPasteTarget = false, className = "") {
     const td = document.createElement("td");
     const input = document.createElement("input");
@@ -149,6 +175,18 @@ function inputCell(type, readOnly = false, value = "", isPasteTarget = false, cl
         if (tbodyElement.classList.contains("table-faded") || clickedRow.classList.contains('highlight-focused-item')) {
             resetDuplicateSearchState();
         }
+
+        if (!demarcarLinha) {
+            if (removerDemarcacao) {
+                e.target.closest("td").style.backgroundColor = "";
+            } else if (corSelecionada) {
+                if (e.target.closest("td").style.backgroundColor === corSelecionada) {
+                    e.target.closest("td").style.backgroundColor = "";
+                } else {
+                    e.target.closest("td").style.backgroundColor = corSelecionada;
+                }
+            }
+        }
     });
 
     input.addEventListener('keydown', (e) => {
@@ -185,23 +223,17 @@ function inputCell(type, readOnly = false, value = "", isPasteTarget = false, cl
         }
     });
 
-    input.addEventListener("click", (e) => {
-        if (!demarcarLinha) {
-            if (removerDemarcacao) {
-                e.target.closest("td").style.backgroundColor = "";
-            } else if (corSelecionada) {
-                if (e.target.closest("td").style.backgroundColor === corSelecionada) {
-                    e.target.closest("td").style.backgroundColor = "";
-                } else {
-                    e.target.closest("td").style.backgroundColor = corSelecionada;
-                }
-            }
-        }
-    });
     td.appendChild(input);
     return td;
 }
 
+/**
+ * Cria e retorna um elemento de célula <td> com um <select> dentro.
+ * @param {string[]} [options=[]] - Um array de strings para as opções do select.
+ * @param {string} [selected=""] - O valor da opção que deve vir selecionada.
+ * @param {string} [className=""] - Classes CSS para adicionar ao <td>.
+ * @returns {HTMLTableCellElement} O elemento <td> criado.
+ */
 function selectCell(options = [], selected = "", className = "") {
     const td = document.createElement("td");
     const select = document.createElement("select");
@@ -235,7 +267,7 @@ function selectCell(options = [], selected = "", className = "") {
     });
 
     select.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') {
+         if (e.key === 'Enter') {
             e.preventDefault();
             const currentSelect = e.target;
             const currentTd = currentSelect.closest('td');
@@ -272,6 +304,11 @@ function selectCell(options = [], selected = "", className = "") {
     return td;
 }
 
+/**
+ * Cria uma nova linha <tr> da tabela com todas as células e inputs.
+ * @param {Object} [v={}] - Um objeto com os valores para preencher a linha.
+ * @returns {HTMLTableRowElement} A linha <tr> criada.
+ */
 function criarLinha(v = {}) {
     const row = document.createElement("tr");
 
@@ -482,6 +519,26 @@ function rgbToHex(rgb) {
     return "#" + parts.join("").toUpperCase();
 }
 
+function focusOnDuplicate(rowToFocus) {
+    if (!rowToFocus) return;
+    const tbodyElement = document.getElementById("listaTabela").querySelector('tbody');
+    tabela.querySelectorAll('tr').forEach(row => { row.classList.remove('highlight-focused-item'); row.classList.remove('temp-highlight-found'); });
+    tbodyElement.classList.add("table-faded");
+    rowToFocus.classList.add('highlight-focused-item');
+    rowToFocus.classList.add('highlight-duplicate');
+    rowToFocus.classList.add('temp-highlight-found');
+    rowToFocus.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+function getContrastColor(hexcolor) {
+    if (!hexcolor.startsWith("#")) { return "black"; }
+    const r = parseInt(hexcolor.slice(1, 3), 16);
+    const g = parseInt(hexcolor.slice(3, 5), 16);
+    const b = parseInt(hexcolor.slice(5, 7), 16);
+    const hsp = Math.sqrt(0.299 * (r * r) + 0.587 * (g * g) + 0.114 * (b * b));
+    return (hsp > 127.5) ? "black" : "white";
+}
+
 function exportarParaExcel() {
     const ws_data = [["NIVEL", "SITE", "ALTERNATIVA", "CODIGO_MATERIAL", "TIPO ESTRUTURA", "LINHA", "ITEM_COMPONENTE", "QTDE_MONTAGEM", "UNIDADE DE MEDIDA", "FATOR_SUCATA"]];
     tabela.querySelectorAll("tr").forEach(row => {
@@ -553,185 +610,6 @@ function acaoImportouOuAdicionouLinhas() {
     verificarDuplicatas();
 }
 
-document.getElementById("criarListaBtn").addEventListener("click", () => {
-    tabela.innerHTML = "";
-    criar10Linhas();
-    acaoImportouOuAdicionouLinhas();
-    Swal.fire("✅ Lista Criada!", "10 novas linhas foram adicionadas.", "success");
-});
-document.getElementById("continuarListaBtn").addEventListener("click", () => {
-    criar10Linhas();
-    acaoImportouOuAdicionouLinhas();
-    Swal.fire("➕ Adicionado", "10 novas linhas foram inseridas.", "success");
-});
-document.getElementById("salvarListaBtn").addEventListener("click", exportarParaExcel);
-document.getElementById("copiarSelecionadoBtn").addEventListener("click", () => {
-    const linhasSelecionadas = Array.from(tabela.querySelectorAll(".linha-selecao:checked")).map(cb => cb.closest("tr"));
-    if (linhasSelecionadas.length === 0) { Swal.fire("⚠️ Nada para Copiar", "Nenhuma linha selecionada para cópia.", "warning"); return; }
-    cacheCopiado = linhasSelecionadas.map(row => getLinhaData(row));
-    Swal.fire("✅ Copiado!", `${cacheCopiado.length} linhas copiadas.`, "success");
-});
-document.getElementById("colarBtn").addEventListener("click", () => {
-    if (cacheCopiado.length === 0) { Swal.fire("ℹ️ Nada para Colar", "Nenhum dado copiado.", "info"); return; }
-    const linhasSelecionadas = Array.from(tabela.querySelectorAll(".linha-selecao:checked")).map(cb => cb.closest("tr"));
-    const startIndex = linhasSelecionadas.length > 0 ? Array.from(tabela.rows).indexOf(linhasSelecionadas[0]) : tabela.rows.length;
-    cacheCopiado.forEach((rowData, i) => {
-        const targetRow = tabela.rows[startIndex + i];
-        if (targetRow) { preencherLinha(targetRow, rowData); } else { const newRow = criarLinha(rowData); tabela.appendChild(newRow); }
-    });
-    acaoImportouOuAdicionouLinhas();
-    Swal.fire("✅ Colado!", `${cacheCopiado.length} linhas coladas.`, "success");
-});
-document.getElementById("deletarSelecionadosBtn").addEventListener("click", () => {
-    const linhasParaDeletar = Array.from(tabela.querySelectorAll(".linha-selecao:checked")).map(cb => cb.closest("tr"));
-    if (linhasParaDeletar.length === 0) { Swal.fire("⚠️ Nenhuma Linha Selecionada", "Selecione as linhas para deletar.", "warning"); return; }
-    Swal.fire({
-        title: 'Tem certeza?',
-        text: `Você vai deletar ${linhasParaDeletar.length} linha(s).`,
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: '#d33',
-        cancelButtonColor: '#3085d6',
-        confirmButtonText: 'Sim, deletar!',
-        cancelButtonText: 'Cancelar'
-    }).then((result) => {
-        if (result.isConfirmed) {
-            linhasParaDeletar.forEach(row => row.remove());
-            acaoImportouOuAdicionouLinhas();
-            Swal.fire('Deletado!', `${linhasParaDeletar.length} linha(s) foram deletadas.`, 'success');
-        }
-    });
-});
-document.getElementById("inserirAcimaBtn").addEventListener("click", () => {
-    const linhasSelecionadas = Array.from(tabela.querySelectorAll(".linha-selecao:checked")).map(cb => cb.closest("tr"));
-    if (linhasSelecionadas.length === 0) { Swal.fire("⚠️ Nenhuma Linha Selecionada", "Selecione a(s) linha(s) acima da qual deseja inserir.", "warning"); return; }
-    const primeiraLinhaSelecionada = linhasSelecionadas[0];
-    const novaLinha = criarLinhaVazia();
-    tabela.insertBefore(novaLinha, primeiraLinhaSelecionada);
-    acaoImportouOuAdicionouLinhas();
-    Swal.fire("⬆️ Inserido", "Uma nova linha foi inserida acima da seleção.", "success");
-});
-document.getElementById("inserirAbaixoBtn").addEventListener("click", () => {
-    const linhasSelecionadas = Array.from(tabela.querySelectorAll(".linha-selecao:checked")).map(cb => cb.closest("tr"));
-    if (linhasSelecionadas.length === 0) { Swal.fire("⚠️ Nenhuma Linha Selecionada", "Selecione a(s) linha(s) abaixo da qual deseja inserir.", "warning"); return; }
-    const ultimaLinhaSelecionada = linhasSelecionadas[linhasSelecionadas.length - 1];
-    const novaLinha = criarLinhaVazia();
-    if (ultimaLinhaSelecionada.nextElementSibling) { tabela.insertBefore(novaLinha, ultimaLinhaSelecionada.nextElementSibling); } else { tabela.appendChild(novaLinha); }
-    acaoImportouOuAdicionouLinhas();
-    Swal.fire("⬇️ Inserido", "Uma nova linha foi inserida abaixo da seleção.", "success");
-});
-document.getElementById("toggleSeqBtn").addEventListener("click", () => {
-    seqAtivo = !seqAtivo;
-    document.getElementById("listaTabela").classList.toggle("seq-col-hidden", !seqAtivo);
-    document.getElementById("toggleSeqBtn").innerHTML = seqAtivo ? '<span class="material-symbols-outlined">visibility</span> SEQ' : '<span class="material-symbols-outlined">visibility_off</span> SEQ';
-});
-document.getElementById("toggleNivelColBtn").addEventListener("click", () => {
-    nivelColVisivel = !nivelColVisivel;
-    document.getElementById("listaTabela").classList.toggle("nivel-col-hidden", !nivelColVisivel);
-    document.getElementById("toggleNivelColBtn").innerHTML = nivelColVisivel ? '<span class="material-symbols-outlined">layers</span> NÍVEL' : '<span class="material-symbols-outlined">layers_clear</span> NÍVEL';
-});
-document.getElementById("toggleHoverEffectBtn").addEventListener("click", () => {
-    hoverEffectAtivo = !hoverEffectAtivo;
-    const tableElement = document.getElementById("listaTabela");
-    tableElement.classList.toggle("hover-effect", hoverEffectAtivo);
-    tableElement.classList.toggle("no-hover-effect", !hoverEffectAtivo);
-    document.getElementById("toggleHoverEffectBtn").innerHTML = hoverEffectAtivo ? '<span class="material-symbols-outlined">straighten</span> Régua' : '<span class="material-symbols-outlined">format_line_spacing</span> Régua';
-});
-document.getElementById("clearPaintBtn").addEventListener("click", () => {
-    corSelecionada = "";
-    demarcarLinha = false;
-    removerDemarcacao = false;
-    document.getElementById("demarcarLinhaCheckbox").checked = false;
-    document.getElementById("removerDemarcacaoCheckbox").checked = false;
-    Swal.fire("🎨 Limpeza", "Seleção de cor e modos de demarcação limpos.", "info");
-});
-document.getElementById("demarcarLinhaCheckbox").addEventListener("change", (e) => {
-    demarcarLinha = e.target.checked;
-    if (demarcarLinha) removerDemarcacao = false;
-    document.getElementById("removerDemarcacaoCheckbox").checked = false;
-});
-document.getElementById("removerDemarcacaoCheckbox").addEventListener("change", (e) => {
-    removerDemarcacao = e.target.checked;
-    if (removerDemarcacao) demarcarLinha = false;
-    document.getElementById("demarcarLinhaCheckbox").checked = false;
-});
-const nivelColorButtonsDiv = document.getElementById("nivelColorButtons");
-nivelColors.forEach((color, index) => {
-    const button = document.createElement("button");
-    button.classList.add("paint-btn");
-    button.style.backgroundColor = color;
-    button.style.color = getContrastColor(color);
-    button.textContent = `Nível ${index + 1}`;
-    button.dataset.color = color;
-    button.addEventListener("click", (e) => {
-        corSelecionada = e.target.dataset.color;
-        Swal.fire(`🎨 Cor Selecionada`, `Cor para Nível ${index + 1} selecionada.`, "info");
-    });
-    nivelColorButtonsDiv.appendChild(button);
-});
-document.querySelectorAll("#attentionColorButtons .paint-btn").forEach(button => {
-    button.addEventListener("click", (e) => {
-        corSelecionada = e.target.dataset.color;
-        Swal.fire(`🎨 Cor Selecionada`, `Cor ${e.target.textContent.trim()} selecionada.`, "info");
-    });
-});
-function getContrastColor(hexcolor) {
-    if (!hexcolor.startsWith("#")) { return "black"; }
-    const r = parseInt(hexcolor.slice(1, 3), 16);
-    const g = parseInt(hexcolor.slice(3, 5), 16);
-    const b = parseInt(hexcolor.slice(5, 7), 16);
-    const hsp = Math.sqrt(0.299 * (r * r) + 0.587 * (g * g) + 0.114 * (b * b));
-    return (hsp > 127.5) ? "black" : "white";
-}
-document.getElementById("ignorarDuplicatasCheckbox").addEventListener("change", (e) => { ignorarDuplicatas = e.target.checked; verificarDuplicatas(); });
-document.getElementById("toggleAllCheckboxesHeader").addEventListener("click", (e) => {
-    const isChecked = e.target.checked;
-    document.getElementById("toggleAllCheckboxes").checked = isChecked;
-    tabela.querySelectorAll(".linha-selecao").forEach(checkbox => { checkbox.checked = isChecked; });
-});
-document.getElementById("toggleAllCheckboxes").addEventListener("click", (e) => {
-    const isChecked = e.target.checked;
-    document.getElementById("toggleAllCheckboxesHeader").checked = isChecked;
-    tabela.querySelectorAll(".linha-selecao").forEach(checkbox => { checkbox.checked = isChecked; });
-});
-document.getElementById("inputFile").addEventListener("change", function (e) {
-    carregarExcel(e.target);
-    e.target.value = '';
-});
-document.getElementById("findDuplicatesBtn").addEventListener("click", () => {
-    resetDuplicateSearchState();
-    const currentDuplicates = Array.from(tabela.querySelectorAll('tr.highlight-duplicate'));
-    if (currentDuplicates.length === 0) { Swal.fire("ℹ️ Sem Duplicatas", "Não há itens duplicados para buscar na lista.", "info"); return; }
-    foundDuplicates = currentDuplicates.sort((a, b) => { return Array.from(tabela.rows).indexOf(a) - Array.from(tabela.rows).indexOf(b); });
-    currentDuplicateIndex = 0;
-    focusOnDuplicate(foundDuplicates[currentDuplicateIndex]);
-});
-function focusOnDuplicate(rowToFocus) {
-    if (!rowToFocus) return;
-    const tbodyElement = document.getElementById("listaTabela").querySelector('tbody');
-    tabela.querySelectorAll('tr').forEach(row => { row.classList.remove('highlight-focused-item'); row.classList.remove('temp-highlight-found'); });
-    tbodyElement.classList.add("table-faded");
-    rowToFocus.classList.add('highlight-focused-item');
-    rowToFocus.classList.add('highlight-duplicate');
-    rowToFocus.classList.add('temp-highlight-found');
-    rowToFocus.scrollIntoView({ behavior: 'smooth', block: 'center' });
-}
-document.addEventListener('keydown', (e) => {
-    const tbodyElement = document.getElementById("listaTabela").querySelector('tbody');
-    if (foundDuplicates.length > 0 && tbodyElement.classList.contains("table-faded")) {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            currentDuplicateIndex++;
-            if (currentDuplicateIndex >= foundDuplicates.length) { currentDuplicateIndex = 0; }
-            focusOnDuplicate(foundDuplicates[currentDuplicateIndex]);
-        } else if (e.key === 'Escape') {
-            e.preventDefault();
-            resetDuplicateSearchState();
-            Swal.fire("✅ Busca Encerrada", "O modo de busca de duplicatas foi desativado.", "info");
-        }
-    }
-});
-document.addEventListener('paste', handlePasteMultipleLines);
 async function handlePasteMultipleLines(event) {
     const pastedText = (event.clipboardData || window.clipboardData).getData('text');
     if (!pastedText) return;
@@ -780,13 +658,177 @@ async function handlePasteMultipleLines(event) {
 }
 
 // ===================================================================================
-// --- FUNÇÕES DE SALVAMENTO AUTOMÁTICO E RESTAURAÇÃO DE SESSÃO ---
+// --- LISTENERS DE EVENTOS PRINCIPAIS ---
 // ===================================================================================
 
-/**
- * Atualiza o horário do último backup exibido na tela.
- * @param {Date|string|null} timestamp - O objeto Date ou a string da data do último backup.
- */
+function adicionarListenersDeEventos() {
+    document.getElementById("criarListaBtn").addEventListener("click", () => {
+        tabela.innerHTML = "";
+        criar10Linhas();
+        acaoImportouOuAdicionouLinhas();
+        Swal.fire("✅ Lista Criada!", "10 novas linhas foram adicionadas.", "success");
+    });
+    document.getElementById("continuarListaBtn").addEventListener("click", () => {
+        criar10Linhas();
+        acaoImportouOuAdicionouLinhas();
+        Swal.fire("➕ Adicionado", "10 novas linhas foram inseridas.", "success");
+    });
+    document.getElementById("salvarListaBtn").addEventListener("click", exportarParaExcel);
+    document.getElementById("copiarSelecionadoBtn").addEventListener("click", () => {
+        const linhasSelecionadas = Array.from(tabela.querySelectorAll(".linha-selecao:checked")).map(cb => cb.closest("tr"));
+        if (linhasSelecionadas.length === 0) { Swal.fire("⚠️ Nada para Copiar", "Nenhuma linha selecionada para cópia.", "warning"); return; }
+        cacheCopiado = linhasSelecionadas.map(row => getLinhaData(row));
+        Swal.fire("✅ Copiado!", `${cacheCopiado.length} linhas copiadas.`, "success");
+    });
+    document.getElementById("colarBtn").addEventListener("click", () => {
+        if (cacheCopiado.length === 0) { Swal.fire("ℹ️ Nada para Colar", "Nenhum dado copiado.", "info"); return; }
+        const linhasSelecionadas = Array.from(tabela.querySelectorAll(".linha-selecao:checked")).map(cb => cb.closest("tr"));
+        const startIndex = linhasSelecionadas.length > 0 ? Array.from(tabela.rows).indexOf(linhasSelecionadas[0]) : tabela.rows.length;
+        cacheCopiado.forEach((rowData, i) => {
+            const targetRow = tabela.rows[startIndex + i];
+            if (targetRow) { preencherLinha(targetRow, rowData); } else { const newRow = criarLinha(rowData); tabela.appendChild(newRow); }
+        });
+        acaoImportouOuAdicionouLinhas();
+        Swal.fire("✅ Colado!", `${cacheCopiado.length} linhas coladas.`, "success");
+    });
+    document.getElementById("deletarSelecionadosBtn").addEventListener("click", () => {
+        const linhasParaDeletar = Array.from(tabela.querySelectorAll(".linha-selecao:checked")).map(cb => cb.closest("tr"));
+        if (linhasParaDeletar.length === 0) { Swal.fire("⚠️ Nenhuma Linha Selecionada", "Selecione as linhas para deletar.", "warning"); return; }
+        Swal.fire({
+            title: 'Tem certeza?',
+            text: `Você vai deletar ${linhasParaDeletar.length} linha(s).`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Sim, deletar!',
+            cancelButtonText: 'Cancelar'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                linhasParaDeletar.forEach(row => row.remove());
+                acaoImportouOuAdicionouLinhas();
+                Swal.fire('Deletado!', `${linhasParaDeletar.length} linha(s) foram deletadas.`, 'success');
+            }
+        });
+    });
+    document.getElementById("inserirAcimaBtn").addEventListener("click", () => {
+        const linhasSelecionadas = Array.from(tabela.querySelectorAll(".linha-selecao:checked")).map(cb => cb.closest("tr"));
+        if (linhasSelecionadas.length === 0) { Swal.fire("⚠️ Nenhuma Linha Selecionada", "Selecione a(s) linha(s) acima da qual deseja inserir.", "warning"); return; }
+        const primeiraLinhaSelecionada = linhasSelecionadas[0];
+        const novaLinha = criarLinhaVazia();
+        tabela.insertBefore(novaLinha, primeiraLinhaSelecionada);
+        acaoImportouOuAdicionouLinhas();
+        Swal.fire("⬆️ Inserido", "Uma nova linha foi inserida acima da seleção.", "success");
+    });
+    document.getElementById("inserirAbaixoBtn").addEventListener("click", () => {
+        const linhasSelecionadas = Array.from(tabela.querySelectorAll(".linha-selecao:checked")).map(cb => cb.closest("tr"));
+        if (linhasSelecionadas.length === 0) { Swal.fire("⚠️ Nenhuma Linha Selecionada", "Selecione a(s) linha(s) abaixo da qual deseja inserir.", "warning"); return; }
+        const ultimaLinhaSelecionada = linhasSelecionadas[linhasSelecionadas.length - 1];
+        const novaLinha = criarLinhaVazia();
+        if (ultimaLinhaSelecionada.nextElementSibling) { tabela.insertBefore(novaLinha, ultimaLinhaSelecionada.nextElementSibling); } else { tabela.appendChild(novaLinha); }
+        acaoImportouOuAdicionouLinhas();
+        Swal.fire("⬇️ Inserido", "Uma nova linha foi inserida abaixo da seleção.", "success");
+    });
+    document.getElementById("toggleSeqBtn").addEventListener("click", () => {
+        seqAtivo = !seqAtivo;
+        document.getElementById("listaTabela").classList.toggle("seq-col-hidden", !seqAtivo);
+        document.getElementById("toggleSeqBtn").innerHTML = seqAtivo ? '<span class="material-symbols-outlined">visibility</span> SEQ' : '<span class="material-symbols-outlined">visibility_off</span> SEQ';
+    });
+    document.getElementById("toggleNivelColBtn").addEventListener("click", () => {
+        nivelColVisivel = !nivelColVisivel;
+        document.getElementById("listaTabela").classList.toggle("nivel-col-hidden", !nivelColVisivel);
+        document.getElementById("toggleNivelColBtn").innerHTML = nivelColVisivel ? '<span class="material-symbols-outlined">layers</span> NÍVEL' : '<span class="material-symbols-outlined">layers_clear</span> NÍVEL';
+    });
+    document.getElementById("toggleHoverEffectBtn").addEventListener("click", () => {
+        hoverEffectAtivo = !hoverEffectAtivo;
+        const tableElement = document.getElementById("listaTabela");
+        tableElement.classList.toggle("hover-effect", hoverEffectAtivo);
+        tableElement.classList.toggle("no-hover-effect", !hoverEffectAtivo);
+        document.getElementById("toggleHoverEffectBtn").innerHTML = hoverEffectAtivo ? '<span class="material-symbols-outlined">straighten</span> Régua' : '<span class="material-symbols-outlined">format_line_spacing</span> Régua';
+    });
+    document.getElementById("clearPaintBtn").addEventListener("click", () => {
+        corSelecionada = "";
+        demarcarLinha = false;
+        removerDemarcacao = false;
+        document.getElementById("demarcarLinhaCheckbox").checked = false;
+        document.getElementById("removerDemarcacaoCheckbox").checked = false;
+        Swal.fire("🎨 Limpeza", "Seleção de cor e modos de demarcação limpos.", "info");
+    });
+    document.getElementById("demarcarLinhaCheckbox").addEventListener("change", (e) => {
+        demarcarLinha = e.target.checked;
+        if (demarcarLinha) removerDemarcacao = false;
+        document.getElementById("removerDemarcacaoCheckbox").checked = false;
+    });
+    document.getElementById("removerDemarcacaoCheckbox").addEventListener("change", (e) => {
+        removerDemarcacao = e.target.checked;
+        if (removerDemarcacao) demarcarLinha = false;
+        document.getElementById("demarcarLinhaCheckbox").checked = false;
+    });
+    const nivelColorButtonsDiv = document.getElementById("nivelColorButtons");
+    nivelColors.forEach((color, index) => {
+        const button = document.createElement("button");
+        button.classList.add("paint-btn");
+        button.style.backgroundColor = color;
+        button.style.color = getContrastColor(color);
+        button.textContent = `Nível ${index + 1}`;
+        button.dataset.color = color;
+        button.addEventListener("click", (e) => {
+            corSelecionada = e.target.dataset.color;
+            Swal.fire(`🎨 Cor Selecionada`, `Cor para Nível ${index + 1} selecionada.`, "info");
+        });
+        nivelColorButtonsDiv.appendChild(button);
+    });
+    document.querySelectorAll("#attentionColorButtons .paint-btn").forEach(button => {
+        button.addEventListener("click", (e) => {
+            corSelecionada = e.target.dataset.color;
+            Swal.fire(`🎨 Cor Selecionada`, `Cor ${e.target.textContent.trim()} selecionada.`, "info");
+        });
+    });
+    document.getElementById("ignorarDuplicatasCheckbox").addEventListener("change", (e) => { ignorarDuplicatas = e.target.checked; verificarDuplicatas(); });
+    document.getElementById("toggleAllCheckboxesHeader").addEventListener("click", (e) => {
+        const isChecked = e.target.checked;
+        document.getElementById("toggleAllCheckboxes").checked = isChecked;
+        tabela.querySelectorAll(".linha-selecao").forEach(checkbox => { checkbox.checked = isChecked; });
+    });
+    document.getElementById("toggleAllCheckboxes").addEventListener("click", (e) => {
+        const isChecked = e.target.checked;
+        document.getElementById("toggleAllCheckboxesHeader").checked = isChecked;
+        tabela.querySelectorAll(".linha-selecao").forEach(checkbox => { checkbox.checked = isChecked; });
+    });
+    document.getElementById("inputFile").addEventListener("change", function (e) {
+        carregarExcel(e.target);
+        e.target.value = '';
+    });
+    document.getElementById("findDuplicatesBtn").addEventListener("click", () => {
+        resetDuplicateSearchState();
+        const currentDuplicates = Array.from(tabela.querySelectorAll('tr.highlight-duplicate'));
+        if (currentDuplicates.length === 0) { Swal.fire("ℹ️ Sem Duplicatas", "Não há itens duplicados para buscar na lista.", "info"); return; }
+        foundDuplicates = currentDuplicates.sort((a, b) => { return Array.from(tabela.rows).indexOf(a) - Array.from(tabela.rows).indexOf(b); });
+        currentDuplicateIndex = 0;
+        focusOnDuplicate(foundDuplicates[currentDuplicateIndex]);
+    });
+    document.addEventListener('keydown', (e) => {
+        const tbodyElement = document.getElementById("listaTabela").querySelector('tbody');
+        if (foundDuplicates.length > 0 && tbodyElement.classList.contains("table-faded")) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                currentDuplicateIndex++;
+                if (currentDuplicateIndex >= foundDuplicates.length) { currentDuplicateIndex = 0; }
+                focusOnDuplicate(foundDuplicates[currentDuplicateIndex]);
+            } else if (e.key === 'Escape') {
+                e.preventDefault();
+                resetDuplicateSearchState();
+                Swal.fire("✅ Busca Encerrada", "O modo de busca de duplicatas foi desativado.", "info");
+            }
+        }
+    });
+    document.addEventListener('paste', handlePasteMultipleLines);
+}
+
+// ===================================================================================
+// --- SALVAMENTO AUTOMÁTICO E RESTAURAÇÃO DE SESSÃO ---
+// ===================================================================================
+
 function atualizarHorarioBackupDisplay(timestamp) {
     const horarioElement = document.getElementById('ultimo-backup-horario');
     if (horarioElement) {
@@ -799,9 +841,6 @@ function atualizarHorarioBackupDisplay(timestamp) {
     }
 }
 
-/**
- * Salva o estado atual da tabela e o timestamp no localStorage.
- */
 function salvarEstadoLocalmente() {
     const linhas = Array.from(tabela.rows);
     if (linhas.length === 0) {
@@ -809,55 +848,29 @@ function salvarEstadoLocalmente() {
         atualizarHorarioBackupDisplay(null);
         return;
     }
-
     const dadosTabela = linhas.map(row => getLinhaData(row));
-
     const dadosComTimestamp = {
         timestamp: new Date(),
         data: dadosTabela
     };
-
     localStorage.setItem('listaTecnicaAutoSave', JSON.stringify(dadosComTimestamp));
     atualizarHorarioBackupDisplay(dadosComTimestamp.timestamp);
-
-    const Toast = Swal.mixin({
-        toast: true,
-        position: 'top-end',
-        showConfirmButton: false,
-        timer: 3000,
-        timerProgressBar: true,
-        didOpen: (toast) => {
-            toast.addEventListener('mouseenter', Swal.stopTimer);
-            toast.addEventListener('mouseleave', Swal.resumeTimer);
-        }
-    });
-    Toast.fire({
-        icon: 'success',
-        title: 'Progresso salvo automaticamente!'
-    });
 }
 
-/**
- * Gerencia o fluxo de inicialização da aplicação, lendo o estado salvo
- * e oferecendo opções ao usuário.
- */
 async function gerenciarInicializacao() {
     const dadosSalvosJSON = localStorage.getItem('listaTecnicaAutoSave');
     let dadosSalvos = null;
     let ultimoBackupTimestamp = null;
-
     if (dadosSalvosJSON) {
         const objetoSalvo = JSON.parse(dadosSalvosJSON);
         if (objetoSalvo.data && objetoSalvo.timestamp) {
             dadosSalvos = objetoSalvo.data;
             ultimoBackupTimestamp = objetoSalvo.timestamp;
         } else {
-            dadosSalvos = objetoSalvo; // Fallback para formato antigo
+            dadosSalvos = objetoSalvo;
         }
     }
-
     atualizarHorarioBackupDisplay(ultimoBackupTimestamp);
-
     try {
         if (dadosSalvos) {
             const result = await Swal.fire({
@@ -876,7 +889,6 @@ async function gerenciarInicializacao() {
                 allowOutsideClick: false,
                 allowEscapeKey: false
             });
-
             if (result.isConfirmed) {
                 tabela.innerHTML = "";
                 dadosSalvos.forEach(rowData => tabela.appendChild(criarLinha(rowData)));
@@ -910,7 +922,6 @@ async function gerenciarInicializacao() {
                 allowOutsideClick: false,
                 allowEscapeKey: false
             });
-
             if (result.isConfirmed) {
                 document.getElementById('inputFile').click();
                 if (tabela.rows.length === 0) {
@@ -930,35 +941,57 @@ async function gerenciarInicializacao() {
         acaoImportouOuAdicionouLinhas();
         Swal.fire('Ocorreu um erro', 'Iniciando com uma lista vazia.', 'error');
     }
-
     configurarInterfaceETimers();
+    adicionarListenersDeEventos();
 }
 
-/**
- * Configura elementos da UI e inicia o timer de salvamento automático.
- * Esta função é chamada DEPOIS que o usuário decide como iniciar a lista.
- */
 function configurarInterfaceETimers() {
     const tabelaElement = document.getElementById("listaTabela");
     if (!seqAtivo) tabelaElement.classList.add("seq-col-hidden");
     if (!nivelColVisivel) tabelaElement.classList.add("nivel-col-hidden");
     if (hoverEffectAtivo) tabelaElement.classList.add("hover-effect");
     else tabelaElement.classList.add("no-hover-effect");
-
     document.getElementById("toggleSeqBtn").innerHTML = '<span class="material-symbols-outlined">visibility</span> SEQ';
     document.getElementById("toggleNivelColBtn").innerHTML = '<span class="material-symbols-outlined">layers</span> NÍVEL';
     document.getElementById("toggleHoverEffectBtn").innerHTML = '<span class="material-symbols-outlined">straighten</span> Régua';
-
-    setInterval(salvarEstadoLocalmente, 900000); // 15 minutos
+    setInterval(salvarEstadoLocalmente, 900000);
     console.log("Sistema de salvamento automático ativado (a cada 15 minutos).");
 }
 
 // ===================================================================================
-// --- FIM:FUNÇÕES DE SALVAMENTO AUTOMÁTICO E RESTAURAÇÃO DE SESSÃO ---
+// --- FUNCIONALIDADE DE TEMA ESCURO (DRACULA) ---
 // ===================================================================================
+function setupThemeToggle() {
+    const themeToggle = document.getElementById('theme-toggle');
+    if (!themeToggle) return;
+    const body = document.body;
+    const applyTheme = (theme) => {
+        if (theme === 'dark') {
+            body.classList.add('dark-mode');
+            themeToggle.textContent = '☀️';
+        } else {
+            body.classList.remove('dark-mode');
+            themeToggle.textContent = '🌙';
+        }
+    };
+    const savedTheme = localStorage.getItem('theme') || 'light';
+    applyTheme(savedTheme);
+    themeToggle.addEventListener('click', () => {
+        let newTheme;
+        if (body.classList.contains('dark-mode')) {
+            newTheme = 'light';
+        } else {
+            newTheme = 'dark';
+        }
+        applyTheme(newTheme);
+        localStorage.setItem('theme', newTheme);
+    });
+}
 
-/**
- * Listener de Inicialização da Aplicação.
- * Chama a nova função de gerenciamento que oferece opções ao usuário.
- */
-document.addEventListener("DOMContentLoaded", gerenciarInicializacao);
+// ===================================================================================
+// --- INICIALIZAÇÃO DA APLICAÇÃO ---
+// ===================================================================================
+document.addEventListener("DOMContentLoaded", () => {
+    gerenciarInicializacao();
+    setupThemeToggle();
+});
