@@ -14,6 +14,9 @@
         <img src="assets/logo.png" alt="Logo Pakmatic" class="logo">
         <h1><span class="material-symbols-outlined">list_alt</span> Lista Técnica - Padrão IFS</h1>
         <div class="header-info">
+            <button id="buscarItemBtn" class="header-btn" title="Buscar Item">
+                <span class="material-symbols-outlined">search</span>
+            </button>
             <button id="theme-toggle" class="theme-btn">🌙</button>
             <div id="ultimo-backup-info" class="info-display">
                 <span class="material-symbols-outlined">history</span> L bckp: <span id="ultimo-backup-horario">--:--:--</span>
@@ -87,6 +90,21 @@
     </div>
 </div>
 
+<div id="modalBusca" class="modal-overlay" style="display: none;">
+    <div class="modal-content">
+        <header class="modal-header">
+            <h2><span class="material-symbols-outlined">manage_search</span> Buscar Material</h2>
+            <button id="fecharModalBtn" class="modal-close-btn">&times;</button>
+        </header>
+        <div class="modal-body">
+            <input type="text" id="inputBuscaItem" placeholder="Digite o código ou descrição do item...">
+            <div id="resultadosBusca" class="resultados-container">
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="dados_materiais.js"></script>
 <script src="script.js"></script>
 <script src="filtro_nivel.js"></script>
 </body>

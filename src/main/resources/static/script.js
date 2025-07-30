@@ -1,12 +1,12 @@
 /**
  * @file script.js
  * @description Script principal para a aplicação de Lista Técnica IFS.
- * Gerencia todas as funcionalidades da interface, incluindo listeners de botões,
- * manipulação da tabela, tema escuro e alertas.
- * @version 4.1 - Corrigido o comportamento do checkbox "Ignorar Duplicatas".
+ * @version 5.1 - Layout do header corrigido e busca de materiais via modal.
  */
 
-// Variáveis globais e de estado
+// ===================================================================================
+// --- VARIÁVEIS GLOBAIS E DE ESTADO ---
+// ===================================================================================
 let tabela = document.getElementById("listaTabela").getElementsByTagName("tbody")[0];
 let cacheCopiado = [];
 let seqAtivo = true;
@@ -21,13 +21,67 @@ const tiposEstrutura = ["Manufatura", "Comprado", ""];
 const fatorSucata = ["0", "15", ""];
 const alternativas = ["*", ""];
 const siteValores = ["1", ""];
-const niveis = Array.from({ length: 10 }, (_, i) => (i + 1).toString());
 let foundDuplicates = [];
 let currentDuplicateIndex = -1;
 
+// ===================================================================================
+// --- FUNCIONALIDADE DE BUSCA DE MATERIAIS ---
+// ===================================================================================
+
 /**
- * Reseta o estado da busca e destaque de duplicatas na tabela.
+ * Filtra a lista de materiais e exibe os resultados.
+ * @param {string} termo - O texto digitado pelo usuário.
  */
+function filtrarEMostrarResultados(termo) {
+    const resultadosDiv = document.getElementById('resultadosBusca');
+    resultadosDiv.innerHTML = '';
+
+    if (typeof listaDeMateriais === 'undefined') {
+        resultadosDiv.innerHTML = '<div class="resultado-item"><div class="info"><span>Erro: A lista de materiais não foi carregada. Verifique se o arquivo `dados_materiais.js` existe e está sendo importado corretamente no `index.html`.</span></div></div>';
+        return;
+    }
+    if (termo.length < 3) {
+        resultadosDiv.innerHTML = '<div class="resultado-item"><div class="info"><span>Digite ao menos 3 caracteres para buscar...</span></div></div>';
+        return;
+    }
+
+    const termoBusca = termo.toLowerCase();
+    const resultadosFiltrados = listaDeMateriais.filter(item =>
+        item.descricao.toLowerCase().includes(termoBusca) ||
+        item.codigo.toLowerCase().includes(termoBusca)
+    ).slice(0, 100);
+
+    if (resultadosFiltrados.length === 0) {
+        resultadosDiv.innerHTML = '<div class="resultado-item"><div class="info"><span>Nenhum item encontrado.</span></div></div>';
+        return;
+    }
+
+    resultadosFiltrados.forEach(item => {
+        const itemDiv = document.createElement('div');
+        itemDiv.className = 'resultado-item';
+        itemDiv.innerHTML = `<div class="info"><strong>${item.descricao}</strong><span>Código: ${item.codigo}</span></div><button class="copiar-item-btn">Copiar</button>`;
+        itemDiv.querySelector('.copiar-item-btn').addEventListener('click', (e) => {
+            const button = e.target;
+            navigator.clipboard.writeText(item.codigo).then(() => {
+                button.textContent = 'Copiado!';
+                button.classList.add('copiado');
+                setTimeout(() => {
+                    button.textContent = 'Copiar';
+                    button.classList.remove('copiado');
+                }, 2000);
+            }, (err) => {
+                console.error('Falha ao copiar: ', err);
+                Swal.fire('Erro', 'Não foi possível copiar o código.', 'error');
+            });
+        });
+        resultadosDiv.appendChild(itemDiv);
+    });
+}
+
+
+// ===================================================================================
+// --- FUNCIONALIDADES PRINCIPAIS DA TABELA ---
+// ===================================================================================
 function resetDuplicateSearchState() {
     foundDuplicates = [];
     currentDuplicateIndex = -1;
@@ -40,13 +94,6 @@ function resetDuplicateSearchState() {
     verificarDuplicatas();
 }
 
-/**
- * Encontra a primeira linha na tabela que tem a mesma combinação de código material e item componente.
- * @param {string} codigoMaterial - O código do material a ser procurado.
- * @param {string} itemComponente - O item componente a ser procurado.
- * @param {HTMLTableRowElement|null} [currentRow=null] - A linha atual, para ser ignorada na busca.
- * @returns {HTMLTableRowElement|null} A linha duplicada encontrada, ou null se não houver.
- */
 function encontrarLinhaDuplicada(codigoMaterial, itemComponente, currentRow = null) {
     if (!codigoMaterial || !itemComponente) return null;
     const linhas = Array.from(tabela.rows);
@@ -61,12 +108,6 @@ function encontrarLinhaDuplicada(codigoMaterial, itemComponente, currentRow = nu
     return null;
 }
 
-/**
- * Exibe um alerta SweetAlert quando uma duplicata é encontrada durante a digitação.
- * @param {object} newData - Os dados da linha atual que está sendo editada.
- * @param {HTMLTableRowElement} existingRow - A linha existente que é uma duplicata.
- * @returns {Promise<'ignorar'|'cancelar'>} A ação escolhida pelo usuário.
- */
 async function mostrarAlertaDuplicata(newData, existingRow) {
     const existingData = getLinhaData(existingRow);
     const qtdeNova = parseFloat(String(newData.QTDE_MONTAGEM).replace(',', '.')) || 0;
@@ -98,16 +139,6 @@ async function mostrarAlertaDuplicata(newData, existingRow) {
     return 'cancelar';
 }
 
-
-/**
- * Cria e retorna um elemento de célula <td> com um <input> dentro.
- * @param {string} type - O tipo do input (ex: "text").
- * @param {boolean} [readOnly=false] - Define se o campo é somente leitura.
- * @param {string} [value=""] - O valor inicial do campo.
- * @param {boolean} [isPasteTarget=false] - Indica se é um alvo para colagem.
- * @param {string} [className=""] - Classes CSS para adicionar ao <td>.
- * @returns {HTMLTableCellElement} O elemento <td> criado.
- */
 function inputCell(type, readOnly = false, value = "", isPasteTarget = false, className = "") {
     const td = document.createElement("td");
     const input = document.createElement("input");
@@ -129,8 +160,6 @@ function inputCell(type, readOnly = false, value = "", isPasteTarget = false, cl
         const isCodigoMaterialCol = e.target.closest('td').classList.contains('codigo-material-col');
         const isItemComponenteCol = e.target.closest('td').classList.contains('item-componente-col');
 
-        // [CORREÇÃO] Adicionada verificação para ignorar a checagem de duplicata em tempo real
-        // Se a caixa "Ignorar duplicatas" NÃO estiver marcada, executa a verificação.
         if (!ignorarDuplicatas) {
             if (currentData.CODIGO_MATERIAL && currentData.ITEM_COMPONENTE &&
                 (isCodigoMaterialCol || isItemComponenteCol)) {
@@ -166,7 +195,7 @@ function inputCell(type, readOnly = false, value = "", isPasteTarget = false, cl
         }
 
         verificarDuplicatas();
-        if (td.classList.contains('nivel-col')) {
+        if (td.classList.contains('nivel-col') && typeof aplicarIndentacao === 'function') {
             aplicarIndentacao(e.target.closest('tr'));
             e.target.dispatchEvent(new Event('change', { bubbles: true }));
         }
@@ -232,13 +261,6 @@ function inputCell(type, readOnly = false, value = "", isPasteTarget = false, cl
     return td;
 }
 
-/**
- * Cria e retorna um elemento de célula <td> com um <select> dentro.
- * @param {string[]} [options=[]] - Um array de strings para as opções do select.
- * @param {string} [selected=""] - O valor da opção que deve vir selecionada.
- * @param {string} [className=""] - Classes CSS para adicionar ao <td>.
- * @returns {HTMLTableCellElement} O elemento <td> criado.
- */
 function selectCell(options = [], selected = "", className = "") {
     const td = document.createElement("td");
     const select = document.createElement("select");
@@ -309,11 +331,6 @@ function selectCell(options = [], selected = "", className = "") {
     return td;
 }
 
-/**
- * Cria uma nova linha <tr> da tabela com todas as células e inputs.
- * @param {Object} [v={}] - Um objeto com os valores para preencher a linha.
- * @returns {HTMLTableRowElement} A linha <tr> criada.
- */
 function criarLinha(v = {}) {
     const row = document.createElement("tr");
 
@@ -486,20 +503,18 @@ function preencherLinha(row, data) {
 
 function verificarDuplicatas() {
     const linhas = Array.from(tabela.rows);
-    // Primeiro, limpa todos os destaques de duplicata
     linhas.forEach(row => {
         row.classList.remove("highlight-duplicate");
-        // Não removemos "no-highlight-on-ignore" aqui para respeitar a decisão do usuário de cancelar uma entrada
     });
 
-    // Se a opção de ignorar estiver ativa, apenas limpa a contagem e para a função
     if (ignorarDuplicatas) {
         document.getElementById("duplicateCountDisplay").textContent = "";
         return;
     }
 
-    // Se a opção não estiver ativa, prossegue com a detecção
     const combinaçõesDetectadas = new Map();
+    let duplicateCount = 0;
+
     linhas.forEach((tr) => {
         const data = getLinhaData(tr);
         if (data.CODIGO_MATERIAL === "" || data.ITEM_COMPONENTE === "") { return; }
@@ -508,7 +523,6 @@ function verificarDuplicatas() {
         combinaçõesDetectadas.get(hash).push(tr);
     });
 
-    let duplicateCount = 0;
     for (const [hash, rows] of combinaçõesDetectadas) {
         if (rows.length > 1) {
             rows.forEach(row => {
@@ -678,9 +692,19 @@ async function handlePasteMultipleLines(event) {
     }
 }
 
-// ===================================================================================
-// --- LISTENERS DE EVENTOS PRINCIPAIS ---
-// ===================================================================================
+function iniciarBuscaDeDuplicatas() {
+    resetDuplicateSearchState();
+    const currentDuplicates = Array.from(tabela.querySelectorAll('tr.highlight-duplicate'));
+    if (currentDuplicates.length === 0) {
+        Swal.fire("ℹ️ Sem Duplicatas", "Não há itens duplicados para buscar na lista.", "info");
+        return;
+    }
+    foundDuplicates = currentDuplicates.sort((a, b) => {
+        return Array.from(tabela.rows).indexOf(a) - Array.from(tabela.rows).indexOf(b);
+    });
+    currentDuplicateIndex = 0;
+    focusOnDuplicate(foundDuplicates[currentDuplicateIndex]);
+}
 
 function adicionarListenersDeEventos() {
     document.getElementById("criarListaBtn").addEventListener("click", () => {
@@ -824,12 +848,24 @@ function adicionarListenersDeEventos() {
         e.target.value = '';
     });
     document.getElementById("findDuplicatesBtn").addEventListener("click", () => {
-        resetDuplicateSearchState();
-        const currentDuplicates = Array.from(tabela.querySelectorAll('tr.highlight-duplicate'));
-        if (currentDuplicates.length === 0) { Swal.fire("ℹ️ Sem Duplicatas", "Não há itens duplicados para buscar na lista.", "info"); return; }
-        foundDuplicates = currentDuplicates.sort((a, b) => { return Array.from(tabela.rows).indexOf(a) - Array.from(tabela.rows).indexOf(b); });
-        currentDuplicateIndex = 0;
-        focusOnDuplicate(foundDuplicates[currentDuplicateIndex]);
+        if (ignorarDuplicatas) {
+            Swal.fire({
+                title: 'Busca Desativada',
+                text: "A opção 'Ignorar duplicatas' está ativa. Deseja desativá-la e iniciar a busca agora?",
+                icon: 'info',
+                showCancelButton: true,
+                confirmButtonText: 'Sim, desativar e buscar',
+                cancelButtonText: 'Cancelar'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    document.getElementById('ignorarDuplicatasCheckbox').checked = false;
+                    ignorarDuplicatas = false;
+                    iniciarBuscaDeDuplicatas();
+                }
+            });
+        } else {
+            iniciarBuscaDeDuplicatas();
+        }
     });
     document.addEventListener('keydown', (e) => {
         const tbodyElement = document.getElementById("listaTabela").querySelector('tbody');
@@ -847,6 +883,31 @@ function adicionarListenersDeEventos() {
         }
     });
     document.addEventListener('paste', handlePasteMultipleLines);
+
+    // Listeners para o Modal de Busca
+    const modal = document.getElementById('modalBusca');
+    const buscarItemBtn = document.getElementById('buscarItemBtn');
+    const fecharModalBtn = document.getElementById('fecharModalBtn');
+    const inputBusca = document.getElementById('inputBuscaItem');
+
+    buscarItemBtn.addEventListener('click', () => {
+        modal.style.display = 'flex';
+        inputBusca.value = '';
+        const resultadosBusca = document.getElementById('resultadosBusca');
+        resultadosBusca.innerHTML = '<div class="resultado-item"><div class="info"><span>Digite para buscar...</span></div></div>';
+        inputBusca.focus();
+    });
+    fecharModalBtn.addEventListener('click', () => {
+        modal.style.display = 'none';
+    });
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            modal.style.display = 'none';
+        }
+    });
+    inputBusca.addEventListener('input', () => {
+        filtrarEMostrarResultados(inputBusca.value);
+    });
 }
 
 // ===================================================================================
