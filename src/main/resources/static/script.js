@@ -3,7 +3,7 @@
  * @description Script principal para a aplicação de Lista Técnica IFS.
  * Gerencia todas as funcionalidades da interface, incluindo listeners de botões,
  * manipulação da tabela, tema escuro e alertas.
- * @version 4.0 - Versão estável com todas as funcionalidades originais e tema escuro.
+ * @version 4.1 - Corrigido o comportamento do checkbox "Ignorar Duplicatas".
  */
 
 // Variáveis globais e de estado
@@ -129,37 +129,42 @@ function inputCell(type, readOnly = false, value = "", isPasteTarget = false, cl
         const isCodigoMaterialCol = e.target.closest('td').classList.contains('codigo-material-col');
         const isItemComponenteCol = e.target.closest('td').classList.contains('item-componente-col');
 
-        if (currentData.CODIGO_MATERIAL && currentData.ITEM_COMPONENTE &&
-            (isCodigoMaterialCol || isItemComponenteCol)) {
+        // [CORREÇÃO] Adicionada verificação para ignorar a checagem de duplicata em tempo real
+        // Se a caixa "Ignorar duplicatas" NÃO estiver marcada, executa a verificação.
+        if (!ignorarDuplicatas) {
+            if (currentData.CODIGO_MATERIAL && currentData.ITEM_COMPONENTE &&
+                (isCodigoMaterialCol || isItemComponenteCol)) {
 
-            const existingDuplicateRow = encontrarLinhaDuplicada(
-                currentData.CODIGO_MATERIAL,
-                currentData.ITEM_COMPONENTE,
-                currentRow
-            );
+                const existingDuplicateRow = encontrarLinhaDuplicada(
+                    currentData.CODIGO_MATERIAL,
+                    currentData.ITEM_COMPONENTE,
+                    currentRow
+                );
 
-            if (existingDuplicateRow) {
-                const action = await mostrarAlertaDuplicata(currentData, existingDuplicateRow);
-                resetDuplicateSearchState();
+                if (existingDuplicateRow) {
+                    const action = await mostrarAlertaDuplicata(currentData, existingDuplicateRow);
+                    resetDuplicateSearchState();
 
-                if (action === 'ignorar') {
-                    currentRow.classList.remove("no-highlight-on-ignore");
-                    Swal.fire("ℹ️ Duplicata Ignorada", "A linha será inserida normalmente e destacada.", "info");
-                } else if (action === 'cancelar') {
-                    e.target.value = "";
-                    const otherMaterialInput = currentRow.querySelector(".codigo-material-col input");
-                    const otherItemInput = currentRow.querySelector(".item-componente-col input");
-                    const qtdeInput = currentRow.querySelector(".qtde-montagem-col input");
+                    if (action === 'ignorar') {
+                        currentRow.classList.remove("no-highlight-on-ignore");
+                        Swal.fire("ℹ️ Duplicata Ignorada", "A linha será inserida normalmente e destacada.", "info");
+                    } else if (action === 'cancelar') {
+                        e.target.value = "";
+                        const otherMaterialInput = currentRow.querySelector(".codigo-material-col input");
+                        const otherItemInput = currentRow.querySelector(".item-componente-col input");
+                        const qtdeInput = currentRow.querySelector(".qtde-montagem-col input");
 
-                    if (otherMaterialInput && otherMaterialInput !== e.target) otherMaterialInput.value = "";
-                    if (otherItemInput && otherItemInput !== e.target) otherItemInput.value = "";
-                    if (qtdeInput) qtdeInput.value = "";
-                    currentRow.classList.remove("highlight-duplicate");
-                    currentRow.classList.add("no-highlight-on-ignore");
-                    Swal.fire("❌ Entrada Cancelada", "Os campos foram limpos para evitar duplicata.", "info");
+                        if (otherMaterialInput && otherMaterialInput !== e.target) otherMaterialInput.value = "";
+                        if (otherItemInput && otherItemInput !== e.target) otherItemInput.value = "";
+                        if (qtdeInput) qtdeInput.value = "";
+                        currentRow.classList.remove("highlight-duplicate");
+                        currentRow.classList.add("no-highlight-on-ignore");
+                        Swal.fire("❌ Entrada Cancelada", "Os campos foram limpos para evitar duplicata.", "info");
+                    }
                 }
             }
         }
+
         verificarDuplicatas();
         if (td.classList.contains('nivel-col')) {
             aplicarIndentacao(e.target.closest('tr'));
@@ -481,10 +486,20 @@ function preencherLinha(row, data) {
 
 function verificarDuplicatas() {
     const linhas = Array.from(tabela.rows);
-    linhas.forEach(row => { row.classList.remove("highlight-duplicate"); row.classList.remove("no-highlight-on-ignore"); });
-    if (ignorarDuplicatas) { document.getElementById("duplicateCountDisplay").textContent = ""; resetDuplicateSearchState(); return; }
+    // Primeiro, limpa todos os destaques de duplicata
+    linhas.forEach(row => {
+        row.classList.remove("highlight-duplicate");
+        // Não removemos "no-highlight-on-ignore" aqui para respeitar a decisão do usuário de cancelar uma entrada
+    });
+
+    // Se a opção de ignorar estiver ativa, apenas limpa a contagem e para a função
+    if (ignorarDuplicatas) {
+        document.getElementById("duplicateCountDisplay").textContent = "";
+        return;
+    }
+
+    // Se a opção não estiver ativa, prossegue com a detecção
     const combinaçõesDetectadas = new Map();
-    const tempFoundDuplicates = [];
     linhas.forEach((tr) => {
         const data = getLinhaData(tr);
         if (data.CODIGO_MATERIAL === "" || data.ITEM_COMPONENTE === "") { return; }
@@ -492,19 +507,25 @@ function verificarDuplicatas() {
         if (!combinaçõesDetectadas.has(hash)) { combinaçõesDetectadas.set(hash, []); }
         combinaçõesDetectadas.get(hash).push(tr);
     });
+
     let duplicateCount = 0;
     for (const [hash, rows] of combinaçõesDetectadas) {
         if (rows.length > 1) {
-            rows.forEach(row => { if (!row.classList.contains("no-highlight-on-ignore")) { row.classList.add("highlight-duplicate"); } });
-            tempFoundDuplicates.push(...rows);
-            duplicateCount += rows.length;
+            rows.forEach(row => {
+                if (!row.classList.contains("no-highlight-on-ignore")) {
+                    row.classList.add("highlight-duplicate");
+                    duplicateCount++;
+                }
+            });
         }
     }
-    foundDuplicates = tempFoundDuplicates.filter(row => row.classList.contains("highlight-duplicate"));
-    foundDuplicates.sort((a, b) => Array.from(tabela.rows).indexOf(a) - Array.from(tabela.rows).indexOf(b));
+
     const displayElement = document.getElementById("duplicateCountDisplay");
-    if (foundDuplicates.length > 0) { displayElement.textContent = `⚠️ ${foundDuplicates.length} duplicata(s)`; } else { displayElement.textContent = ""; }
-    currentDuplicateIndex = -1;
+    if (duplicateCount > 0) {
+        displayElement.textContent = `⚠️ ${duplicateCount} duplicata(s)`;
+    } else {
+        displayElement.textContent = "";
+    }
 }
 
 function rgbToHex(rgb) {
@@ -784,7 +805,10 @@ function adicionarListenersDeEventos() {
             Swal.fire(`🎨 Cor Selecionada`, `Cor ${e.target.textContent.trim()} selecionada.`, "info");
         });
     });
-    document.getElementById("ignorarDuplicatasCheckbox").addEventListener("change", (e) => { ignorarDuplicatas = e.target.checked; verificarDuplicatas(); });
+    document.getElementById("ignorarDuplicatasCheckbox").addEventListener("change", (e) => {
+        ignorarDuplicatas = e.target.checked;
+        verificarDuplicatas();
+    });
     document.getElementById("toggleAllCheckboxesHeader").addEventListener("click", (e) => {
         const isChecked = e.target.checked;
         document.getElementById("toggleAllCheckboxes").checked = isChecked;
