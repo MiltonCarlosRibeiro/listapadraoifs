@@ -305,9 +305,9 @@ th:nth-child(12), td:nth-child(12) { width: 100px; }
 /* --- TEMA DRACULA (MODO ESCURO) --- */
 body.dark-mode {
     --bg-color: #22242d;
-    --text-color: #f8f8f2; --header-bg: #1f212b; --container-bg: #282a36;
+    --text-color: #1ce6ed; --header-bg: #1f212b; --container-bg: #282a36;
     --controls-bg: #44475a; --table-bg: #282a36; --table-border: #6272a4;
-    --table-header-bg: #44475a; --table-row-even-bg: #2f3240; --input-bg: #21222C;
+    --table-header-bg: #44475a; --table-row-even-bg: #44475a; --input-bg: #44475a;
     --input-border: #6272a4; --input-focus-shadow: rgba(189, 147, 249, 0.4);
     --main-btn-bg: #a31f35; --main-btn-hover-bg: #c52640; --green-btn-bg: #50fa7b;
     --green-btn-hover-bg: #67ff92; --green-btn-text: #282a36; --purple-text: #bd93f9;
