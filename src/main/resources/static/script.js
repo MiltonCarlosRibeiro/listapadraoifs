@@ -1,7 +1,7 @@
 /**
  * @file script.js
  * @description Script principal e final para a aplicação de Lista Técnica IFS.
- * @version 8.0 - Versão estável com todas as funcionalidades solicitadas.
+ * @version 8.3 - Restaurada a navegação por duplicatas com as teclas Enter/Esc.
  */
 
 // ===================================================================================
@@ -450,6 +450,19 @@ function iniciarBuscaDeDuplicatas() {
     focusOnDuplicate(foundDuplicates[currentDuplicateIndex]);
 }
 
+function salvarLocalManualmente() {
+    salvarEstadoLocalmente();
+    Swal.fire({
+        toast: true,
+        position: 'top-end',
+        icon: 'success',
+        title: 'Sessão salva com sucesso!',
+        showConfirmButton: false,
+        timer: 2000,
+        timerProgressBar: true
+    });
+}
+
 function adicionarListenersDeEventos() {
     document.getElementById("criarListaBtn").addEventListener("click", () => {
         Swal.fire({ title: 'Criar Nova Lista?', text: "Qualquer trabalho não salvo será perdido.", icon: 'warning', showCancelButton: true, confirmButtonText: 'Sim, criar nova' }).then(result => {
@@ -465,6 +478,7 @@ function adicionarListenersDeEventos() {
         acaoImportouOuAdicionouLinhas();
     });
     document.getElementById("salvarListaBtn").addEventListener("click", exportarParaExcel);
+    document.getElementById("salvarLocalBtn").addEventListener("click", salvarLocalManualmente);
     document.getElementById("deletarSelecionadosBtn").addEventListener("click", () => {
         const linhasParaDeletar = Array.from(tabela.querySelectorAll(".linha-selecao:checked"));
         if (linhasParaDeletar.length === 0) { Swal.fire("⚠️ Nenhuma Linha Selecionada", "", "warning"); return; }
@@ -536,7 +550,30 @@ function adicionarListenersDeEventos() {
     fecharModalBtn.addEventListener('click', () => { modal.style.display = 'none'; });
     modal.addEventListener('click', (e) => { if (e.target === modal) modal.style.display = 'none'; });
     inputBusca.addEventListener('input', () => filtrarEMostrarResultados(inputBusca.value));
+
     document.addEventListener('keydown', (e) => {
+        const tbodyElement = document.getElementById("listaTabela").querySelector('tbody');
+        if (foundDuplicates.length > 0 && tbodyElement.classList.contains("table-faded")) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                currentDuplicateIndex++;
+                if (currentDuplicateIndex >= foundDuplicates.length) {
+                    currentDuplicateIndex = 0;
+                }
+                focusOnDuplicate(foundDuplicates[currentDuplicateIndex]);
+                return;
+            } else if (e.key === 'Escape') {
+                e.preventDefault();
+                resetDuplicateSearchState();
+                Swal.fire({ toast: true, position: 'top-end', icon: 'info', title: 'Busca encerrada.', showConfirmButton: false, timer: 1500 });
+                return;
+            }
+        }
+        if (e.ctrlKey && e.key === '1') {
+            e.preventDefault();
+            document.getElementById('salvarLocalBtn').click();
+            return;
+        }
         if (e.ctrlKey && e.shiftKey && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
             e.preventDefault();
             document.getElementById(e.key === 'ArrowUp' ? 'inserirAcimaBtn' : 'inserirAbaixoBtn').click();
@@ -551,7 +588,10 @@ function adicionarListenersDeEventos() {
             e.preventDefault();
             document.getElementById(shortcuts[e.key.toLowerCase()]).click();
         }
-        if (e.ctrlKey && e.key.toLowerCase() === 'i') { e.preventDefault(); document.querySelector('label[for="inputFile"]').click(); }
+        if (e.ctrlKey && e.key.toLowerCase() === 'i') {
+            e.preventDefault();
+            document.querySelector('label[for="inputFile"]').click();
+        }
         if (e.ctrlKey && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
             e.preventDefault();
             const row = tabela.querySelector(e.key === 'ArrowUp' ? 'tr:first-child' : 'tr:last-child');
@@ -567,7 +607,7 @@ function atualizarHorarioBackupDisplay(timestamp) {
     document.getElementById('ultimo-backup-horario').textContent = timestamp ? new Date(timestamp).toLocaleTimeString('pt-BR') : '--:--:--';
 }
 function salvarEstadoLocalmente() {
-    const dadosTabela = Array.from(tabela.rows).map(row => getLinhaData(row));
+    const dadosTabela = Array.from(tabela.rows).map(getLinhaData);
     if (dadosTabela.length > 0) {
         const dadosComTimestamp = { timestamp: new Date(), data: dadosTabela };
         localStorage.setItem('listaTecnicaAutoSave', JSON.stringify(dadosComTimestamp));
@@ -623,14 +663,11 @@ async function gerenciarInicializacao() {
             acaoImportouOuAdicionouLinhas();
         }
     }
-    configurarInterfaceETimers();
     adicionarListenersDeEventos();
+    configurarInterfaceETimers();
 }
 
 function configurarInterfaceETimers() {
-    document.getElementById("listaTabela").classList.toggle("seq-col-hidden", !seqAtivo);
-    document.getElementById("listaTabela").classList.toggle("nivel-col-hidden", !nivelColVisivel);
-    document.getElementById("listaTabela").classList.toggle("hover-effect", hoverEffectAtivo);
     setInterval(salvarEstadoLocalmente, 900000);
 }
 
@@ -638,13 +675,8 @@ function setupThemeToggle() {
     const themeToggle = document.getElementById('theme-toggle');
     const body = document.body;
     const applyTheme = (theme) => {
-        if (theme === 'dark') {
-            body.classList.add('dark-mode');
-            themeToggle.textContent = '☀️';
-        } else {
-            body.classList.remove('dark-mode');
-            themeToggle.textContent = '🌙';
-        }
+        body.classList.toggle('dark-mode', theme === 'dark');
+        themeToggle.textContent = theme === 'dark' ? '☀️' : '🌙';
     };
     const savedTheme = localStorage.getItem('theme') || 'light';
     applyTheme(savedTheme);

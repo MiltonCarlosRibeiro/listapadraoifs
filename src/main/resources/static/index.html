@@ -25,6 +25,9 @@
             <button id="buscarItemBtn" class="header-btn" title="Buscar Item (Ctrl+M)">
                 <span class="material-symbols-outlined">search</span>
             </button>
+            <button id="graficoNiveisBtn" class="header-btn" title="Ver Gráfico de Níveis">
+                <span class="material-symbols-outlined">bar_chart</span>
+            </button>
             <button id="theme-toggle" class="theme-btn">🌙</button>
             <div id="ultimo-backup-info" class="info-display">
                 <span class="material-symbols-outlined">history</span> L bckp: <span id="ultimo-backup-horario">--:--:--</span>
@@ -40,10 +43,12 @@
             <input type="file" id="inputFile" accept=".xlsx, .xls" style="display: none;">
         </label>
         <button id="continuarListaBtn" title="Ctrl + R"><span class="material-symbols-outlined">add_task</span> Continuar Lista</button>
-        <button id="salvarListaBtn" title="Ctrl + '"><span class="material-symbols-outlined">save</span> Salvar Lista</button>
+        <button id="salvarListaBtn" title="Ctrl + '"><span class="material-symbols-outlined">save</span> Salvar Lista (Exportar)</button>
+        <button id="salvarLocalBtn" title="Ctrl + 1"><span class="material-symbols-outlined">backup</span> Salvar Sessão</button>
+
         <button id="copiarSelecionadoBtn"><span class="material-symbols-outlined">content_copy</span> Copiar Selecionado</button>
         <button id="colarBtn"><span class="material-symbols-outlined">content_paste</span> Colar</button>
-        <button id="deletarSelecionadosBtn" title="Ctrl + X"><span class="material-symbols-outlined">delete</span> Deletar Selecionados</button>
+        <button id="deletarSelecionadosBtn" title="Ctrl + D"><span class="material-symbols-outlined">delete</span> Deletar Selecionados</button>
         <button id="inserirAcimaBtn" title="Ctrl + Shift + Seta para Cima"><span class="material-symbols-outlined">arrow_circle_up</span> Inserir Acima</button>
         <button id="inserirAbaixoBtn" title="Ctrl + Shift + Seta para Baixo"><span class="material-symbols-outlined">arrow_circle_down</span> Inserir Abaixo</button>
         <button id="toggleSeqBtn"><span class="material-symbols-outlined">visibility</span> SEQ</button>
@@ -66,13 +71,11 @@
         <label><input type="checkbox" id="ignorarDuplicatasCheckbox"> Ignorar destaque de duplicatas</label>
         <label><input type="checkbox" id="toggleAllCheckboxesHeader"> Marcar/Desmarcar Todos</label>
     </div>
-
     <div class="filter-controls">
         <h3><span class="material-symbols-outlined">filter_alt</span> Filtrar por Nível</h3>
         <div id="checkboxNiveis"></div>
         <button id="limparFiltroNivelBtn">Limpar Filtro</button>
     </div>
-
     <div class="table-container">
         <table id="listaTabela">
             <thead>
@@ -108,9 +111,22 @@
         </div>
     </div>
 </div>
+<div id="modalGrafico" class="modal-overlay" style="display: none;">
+    <div class="modal-content">
+        <header class="modal-header">
+            <h2><span class="material-symbols-outlined">pie_chart</span> Composição por Nível</h2>
+            <button id="fecharModalGraficoBtn" class="modal-close-btn">&times;</button>
+        </header>
+        <div class="modal-body modal-body-chart">
+            <div id="chart-legend" class="chart-legend-container"></div>
+            <div id="chartContainer" class="chart-container"></div>
+        </div>
+    </div>
+</div>
 
 <script src="dados_materiais.js"></script>
 <script src="script.js"></script>
 <script src="filtro_nivel.js"></script>
+<script src="status.js"></script>
 </body>
 </html>
