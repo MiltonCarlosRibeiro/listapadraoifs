@@ -1,7 +1,7 @@
 /**
  * @file script.js
  * @description Script principal e final para a aplicação de Lista Técnica IFS.
- * @version 8.3 - Restaurada a navegação por duplicatas com as teclas Enter/Esc.
+ * @version 12.0 - Restauradas as funções de navegação com Enter e alerta de duplicatas em tempo real.
  */
 
 // ===================================================================================
@@ -11,7 +11,7 @@ let tabela = document.getElementById("listaTabela").getElementsByTagName("tbody"
 let cacheCopiado = [];
 let seqAtivo = true;
 let nivelColVisivel = true;
-let corSelecionada = "";
+let corSelecionadaInfo = { color: "", level: null };
 let demarcarLinha = false;
 let removerDemarcacao = false;
 let ignorarDuplicatas = false;
@@ -99,8 +99,6 @@ function acaoImportouOuAdicionouLinhas() {
 }
 
 function resetDuplicateSearchState() {
-    foundDuplicates = [];
-    currentDuplicateIndex = -1;
     const tbodyElement = document.getElementById("listaTabela").querySelector('tbody');
     tbodyElement.classList.remove("table-faded");
     tabela.querySelectorAll('tr.highlight-focused-item').forEach(row => {
@@ -147,6 +145,7 @@ function inputCell(type, readOnly = false, value = "", isPasteTarget = false, cl
     input.value = (value || "");
     if (className) td.classList.add(className);
 
+    // [CORRIGIDO] Listener de input com alerta de duplicata em tempo real
     input.addEventListener("input", async (e) => {
         if (e.target.closest('td').classList.contains('unidade-medida-col')) {
             e.target.value = e.target.value.toLowerCase();
@@ -175,25 +174,16 @@ function inputCell(type, readOnly = false, value = "", isPasteTarget = false, cl
         atualizarColunaLinha();
     });
 
-    input.addEventListener("click", (e) => {
-        const tbodyElement = document.getElementById("listaTabela").querySelector('tbody');
-        const clickedRow = e.target.closest('tr');
-        if (tbodyElement.classList.contains("table-faded") || clickedRow.classList.contains('highlight-focused-item')) {
-            resetDuplicateSearchState();
-        }
-        if (!demarcarLinha) {
-            if (removerDemarcacao) e.target.closest("td").style.backgroundColor = "";
-            else if (corSelecionada) e.target.closest("td").style.backgroundColor = corSelecionada;
-        }
-    });
-
+    // [CORRIGIDO] Listener de keydown com navegação por Enter
     input.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') {
             e.preventDefault();
             const currentCellIndex = Array.from(e.target.closest('tr').children).indexOf(e.target.closest('td'));
             const nextRow = e.target.closest('tr').nextElementSibling;
-            if (nextRow) nextRow.children[currentCellIndex]?.querySelector('input, select')?.focus();
-            else {
+            if (nextRow) {
+                const nextInput = nextRow.children[currentCellIndex]?.querySelector('input, select');
+                if (nextInput) nextInput.focus();
+            } else {
                 const newRow = criarLinhaVazia();
                 tabela.appendChild(newRow);
                 acaoImportouOuAdicionouLinhas();
@@ -221,19 +211,17 @@ function selectCell(options = [], selected = "", className = "") {
         verificarDuplicatas();
         atualizarColunaLinha();
     });
-    select.addEventListener("click", (e) => {
-        if (!demarcarLinha) {
-            if (removerDemarcacao) e.target.closest("td").style.backgroundColor = "";
-            else if (corSelecionada) e.target.closest("td").style.backgroundColor = corSelecionada;
-        }
-    });
+
+    // [CORRIGIDO] Listener de keydown com navegação por Enter
     select.addEventListener('keydown', (e) => {
          if (e.key === 'Enter') {
             e.preventDefault();
             const currentCellIndex = Array.from(e.target.closest('tr').children).indexOf(e.target.closest('td'));
             const nextRow = e.target.closest('tr').nextElementSibling;
-            if (nextRow) nextRow.children[currentCellIndex]?.querySelector('input, select')?.focus();
-            else {
+            if (nextRow) {
+                const nextInput = nextRow.children[currentCellIndex]?.querySelector('input, select');
+                if (nextInput) nextInput.focus();
+            } else {
                 const newRow = criarLinhaVazia();
                 tabela.appendChild(newRow);
                 acaoImportouOuAdicionouLinhas();
@@ -247,6 +235,44 @@ function selectCell(options = [], selected = "", className = "") {
 
 function criarLinha(v = {}) {
     const row = document.createElement("tr");
+
+    row.addEventListener("click", async (e) => {
+        if (removerDemarcacao) {
+            const targetRow = e.currentTarget;
+            targetRow.style.backgroundColor = "";
+            for (let i = 1; i <= 10; i++) targetRow.classList.remove(`nivel-${i}`);
+            const nivelInput = targetRow.querySelector(".nivel-col input");
+            if (nivelInput) {
+                nivelInput.value = "";
+                nivelInput.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+            return;
+        }
+        if (demarcarLinha && corSelecionadaInfo.color) {
+            const targetRow = e.currentTarget;
+            targetRow.style.backgroundColor = corSelecionadaInfo.color;
+            if (corSelecionadaInfo.level) {
+                const nivelInput = targetRow.querySelector(".nivel-col input");
+                const nivelAtual = nivelInput.value.trim();
+                const novoNivel = String(corSelecionadaInfo.level);
+                if (nivelAtual && nivelAtual !== novoNivel) {
+                    const result = await Swal.fire({
+                        title: 'Alterar Nível?',
+                        html: `A linha já possui o Nível <strong>${nivelAtual}</strong>. Deseja alterar para o Nível <strong>${novoNivel}</strong>?`,
+                        icon: 'question', showCancelButton: true, confirmButtonText: 'Sim, alterar',
+                        cancelButtonText: 'Cancelar', confirmButtonColor: '#28a745', cancelButtonColor: '#d33'
+                    });
+                    if (!result.isConfirmed) {
+                        targetRow.style.backgroundColor = "";
+                        return;
+                    }
+                }
+                nivelInput.value = novoNivel;
+                nivelInput.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+        }
+    });
+
     const checkboxTd = document.createElement("td");
     const checkbox = document.createElement("input");
     checkbox.type = "checkbox";
@@ -256,15 +282,7 @@ function criarLinha(v = {}) {
     const seqTd = document.createElement("td");
     seqTd.classList.add("seq-col");
     row.appendChild(seqTd);
-    const nivelCell = inputCell("text", false, v.NIVEL || "", true, "nivel-col");
-    row.appendChild(nivelCell);
-    row.addEventListener("click", (e) => {
-        if (e.target.tagName.match(/INPUT|SELECT|BUTTON/)) return;
-        if (demarcarLinha) {
-            if (removerDemarcacao) row.style.backgroundColor = "";
-            else if (corSelecionada) row.style.backgroundColor = corSelecionada;
-        }
-    });
+    row.appendChild(inputCell("text", false, v.NIVEL || "", true, "nivel-col"));
     row.appendChild(selectCell(siteValores, v.SITE || "1"));
     row.appendChild(selectCell(alternativas, v.ALTERNATIVA || "*"));
     row.appendChild(inputCell("text", false, v.CODIGO_MATERIAL || "", true, "codigo-material-col"));
@@ -285,7 +303,7 @@ function criar10Linhas() { for (let i = 0; i < 10; i++) tabela.appendChild(criar
 
 function atualizarSequencias() {
     tabela.querySelectorAll("tr").forEach((row, index) => {
-        row.querySelectorAll("td")[1].textContent = (index + 1) * 1;
+        row.querySelectorAll("td")[1].textContent = (index + 1);
     });
 }
 
@@ -328,15 +346,31 @@ function getLinhaData(tr) {
     };
 }
 
+function preencherLinha(targetRow, rowData) {
+    const inputs = targetRow.querySelectorAll("input, select");
+    if(inputs.length < 11) return;
+    inputs[1].value = rowData.NIVEL || "";
+    inputs[2].value = rowData.SITE || "1";
+    inputs[3].value = rowData.ALTERNATIVA || "*";
+    inputs[4].value = rowData.CODIGO_MATERIAL || "";
+    inputs[5].value = rowData.TIPO_ESTRUTURA || "Manufatura";
+    inputs[7].value = rowData.ITEM_COMPONENTE || "";
+    inputs[8].value = rowData.QTDE_MONTAGEM || "";
+    inputs[9].value = rowData.UNIDADE_MEDIDA || "";
+    inputs[10].value = rowData.FATOR_SUCATA || "0";
+    inputs.forEach(input => input.dispatchEvent(new Event('input', { bubbles: true })));
+}
+
 function verificarDuplicatas() {
     const linhas = Array.from(tabela.rows);
     linhas.forEach(row => row.classList.remove("highlight-duplicate"));
+    const combinaçõesDetectadas = new Map();
+    const tempFoundDuplicates = [];
     if (ignorarDuplicatas) {
         document.getElementById("duplicateCountDisplay").textContent = "";
+        foundDuplicates = [];
         return;
     }
-    const combinaçõesDetectadas = new Map();
-    let duplicateCount = 0;
     linhas.forEach(tr => {
         const data = getLinhaData(tr);
         if (data.CODIGO_MATERIAL === "" || data.ITEM_COMPONENTE === "") return;
@@ -346,31 +380,14 @@ function verificarDuplicatas() {
     });
     for (const rows of combinaçõesDetectadas.values()) {
         if (rows.length > 1) {
-            rows.forEach(row => row.classList.add("highlight-duplicate"));
-            duplicateCount += rows.length;
+            rows.forEach(row => {
+                row.classList.add("highlight-duplicate");
+                tempFoundDuplicates.push(row);
+            });
         }
     }
-    document.getElementById("duplicateCountDisplay").textContent = duplicateCount > 0 ? `⚠️ ${duplicateCount} duplicata(s)` : "";
-}
-
-function rgbToHex(rgb) {
-    if (!rgb || rgb.indexOf('rgb') === -1) return rgb.toUpperCase();
-    const parts = rgb.match(/^rgb\((\d+),\s*(\d+),\s*(\d+)\)$/);
-    delete parts[0];
-    for (let i = 1; i <= 3; i++) {
-        parts[i] = parseInt(parts[i]).toString(16);
-        if (parts[i].length === 1) parts[i] = "0" + parts[i];
-    }
-    return "#" + parts.join("").toUpperCase();
-}
-
-function focusOnDuplicate(rowToFocus) {
-    if (!rowToFocus) return;
-    const tbodyElement = document.getElementById("listaTabela").querySelector('tbody');
-    tabela.querySelectorAll('tr').forEach(row => row.classList.remove('highlight-focused-item', 'temp-highlight-found'));
-    tbodyElement.classList.add("table-faded");
-    rowToFocus.classList.add('highlight-focused-item', 'highlight-duplicate', 'temp-highlight-found');
-    rowToFocus.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    foundDuplicates = tempFoundDuplicates.sort((a, b) => Array.from(tabela.rows).indexOf(a) - Array.from(tabela.rows).indexOf(b));
+    document.getElementById("duplicateCountDisplay").textContent = foundDuplicates.length > 0 ? `⚠️ ${foundDuplicates.length} duplicata(s)` : "";
 }
 
 function getContrastColor(hexcolor) {
@@ -438,18 +455,6 @@ function carregarExcel(inputElement) {
     reader.readAsArrayBuffer(file);
 }
 
-function iniciarBuscaDeDuplicatas() {
-    resetDuplicateSearchState();
-    const currentDuplicates = Array.from(tabela.querySelectorAll('tr.highlight-duplicate'));
-    if (currentDuplicates.length === 0) {
-        Swal.fire("ℹ️ Sem Duplicatas", "Não há itens duplicados para buscar na lista.", "info");
-        return;
-    }
-    foundDuplicates = currentDuplicates;
-    currentDuplicateIndex = 0;
-    focusOnDuplicate(foundDuplicates[currentDuplicateIndex]);
-}
-
 function salvarLocalManualmente() {
     salvarEstadoLocalmente();
     Swal.fire({
@@ -463,15 +468,40 @@ function salvarLocalManualmente() {
     });
 }
 
+function iniciarBuscaDeDuplicatas() {
+    verificarDuplicatas();
+    if (foundDuplicates.length === 0) {
+        Swal.fire("ℹ️ Sem Duplicatas", "Não há itens duplicados para buscar na lista.", "info");
+        return;
+    }
+    currentDuplicateIndex = 0;
+    focusOnDuplicate(foundDuplicates[currentDuplicateIndex]);
+}
+
+function focusOnDuplicate(rowToFocus) {
+    if (!rowToFocus) return;
+    const tbodyElement = document.getElementById("listaTabela").querySelector('tbody');
+    tabela.querySelectorAll('tr').forEach(row => row.classList.remove('highlight-focused-item', 'temp-highlight-found'));
+    tbodyElement.classList.add("table-faded");
+    rowToFocus.classList.add('highlight-focused-item', 'highlight-duplicate', 'temp-highlight-found');
+    rowToFocus.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
 function adicionarListenersDeEventos() {
     document.getElementById("criarListaBtn").addEventListener("click", () => {
-        Swal.fire({ title: 'Criar Nova Lista?', text: "Qualquer trabalho não salvo será perdido.", icon: 'warning', showCancelButton: true, confirmButtonText: 'Sim, criar nova' }).then(result => {
-            if (result.isConfirmed) {
-                tabela.innerHTML = "";
-                criar10Linhas();
-                acaoImportouOuAdicionouLinhas();
-            }
-        });
+        if (tabela.rows.length > 0 && Array.from(tabela.rows).some(row => getLinhaData(row).CODIGO_MATERIAL)) {
+            Swal.fire({ title: 'Criar Nova Lista?', text: "Qualquer trabalho não salvo será perdido.", icon: 'warning', showCancelButton: true, confirmButtonText: 'Sim, criar nova', cancelButtonText: 'Cancelar' }).then(result => {
+                if (result.isConfirmed) {
+                    tabela.innerHTML = "";
+                    criar10Linhas();
+                    acaoImportouOuAdicionouLinhas();
+                }
+            });
+        } else {
+            tabela.innerHTML = "";
+            criar10Linhas();
+            acaoImportouOuAdicionouLinhas();
+        }
     });
     document.getElementById("continuarListaBtn").addEventListener("click", () => {
         criar10Linhas();
@@ -504,8 +534,8 @@ function adicionarListenersDeEventos() {
     });
     document.getElementById("toggleSeqBtn").addEventListener("click", () => { seqAtivo = !seqAtivo; document.getElementById("listaTabela").classList.toggle("seq-col-hidden", !seqAtivo); });
     document.getElementById("toggleNivelColBtn").addEventListener("click", () => { nivelColVisivel = !nivelColVisivel; document.getElementById("listaTabela").classList.toggle("nivel-col-hidden", !nivelColVisivel); });
-    document.getElementById("toggleHoverEffectBtn").addEventListener("click", () => { hoverEffectAtivo = !hoverEffectAtivo; document.getElementById("listaTabela").classList.toggle("hover-effect", hoverEffectAtivo); });
-    document.getElementById("clearPaintBtn").addEventListener("click", () => { corSelecionada = ""; });
+    document.getElementById("toggleHoverEffectBtn").addEventListener("click", () => { hoverEffectAtivo = !hoverEffectAtivo; document.getElementById("listaTabela").classList.toggle("hover-effect", !hoverEffectAtivo); });
+    document.getElementById("clearPaintBtn").addEventListener("click", () => { corSelecionadaInfo = { color: "", level: null }; });
     document.getElementById("demarcarLinhaCheckbox").addEventListener("change", (e) => demarcarLinha = e.target.checked);
     document.getElementById("removerDemarcacaoCheckbox").addEventListener("change", (e) => removerDemarcacao = e.target.checked);
     const nivelColorButtonsDiv = document.getElementById("nivelColorButtons");
@@ -515,11 +545,17 @@ function adicionarListenersDeEventos() {
         button.style.backgroundColor = color;
         button.style.color = getContrastColor(color);
         button.textContent = `Nível ${index + 1}`;
-        button.addEventListener("click", () => corSelecionada = color);
+        button.addEventListener("click", () => {
+            corSelecionadaInfo = { color: color, level: index + 1 };
+            Swal.fire({ toast: true, position: 'top-end', icon: 'info', title: `Cor do Nível ${index + 1} selecionada.`, showConfirmButton: false, timer: 1500 });
+        });
         nivelColorButtonsDiv.appendChild(button);
     });
     document.querySelectorAll("#attentionColorButtons .paint-btn").forEach(button => {
-        button.addEventListener("click", () => corSelecionada = button.dataset.color);
+        button.addEventListener("click", () => {
+            corSelecionadaInfo = { color: button.dataset.color, level: null };
+            Swal.fire({ toast: true, position: 'top-end', icon: 'info', title: `Cor de ${button.textContent.trim()} selecionada.`, showConfirmButton: false, timer: 1500 });
+        });
     });
     document.getElementById("ignorarDuplicatasCheckbox").addEventListener("change", (e) => { ignorarDuplicatas = e.target.checked; verificarDuplicatas(); });
     document.getElementById("toggleAllCheckboxesHeader").addEventListener("change", (e) => {
@@ -556,16 +592,13 @@ function adicionarListenersDeEventos() {
         if (foundDuplicates.length > 0 && tbodyElement.classList.contains("table-faded")) {
             if (e.key === 'Enter') {
                 e.preventDefault();
-                currentDuplicateIndex++;
-                if (currentDuplicateIndex >= foundDuplicates.length) {
-                    currentDuplicateIndex = 0;
-                }
+                currentDuplicateIndex = (currentDuplicateIndex + 1) % foundDuplicates.length;
                 focusOnDuplicate(foundDuplicates[currentDuplicateIndex]);
                 return;
-            } else if (e.key === 'Escape') {
+            }
+            if (e.key === 'Escape') {
                 e.preventDefault();
                 resetDuplicateSearchState();
-                Swal.fire({ toast: true, position: 'top-end', icon: 'info', title: 'Busca encerrada.', showConfirmButton: false, timer: 1500 });
                 return;
             }
         }
