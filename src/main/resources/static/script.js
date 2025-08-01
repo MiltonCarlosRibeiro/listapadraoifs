@@ -614,7 +614,7 @@ function adicionarListenersDeEventos() {
         }
         if (e.target.tagName === 'INPUT' || e.target.isContentEditable) return;
         const shortcuts = {
-            '\'': 'salvarListaBtn', 'r': 'continuarListaBtn', 'n': 'criarListaBtn',
+            '\'': 'salvarListaBtn', 'g': 'continuarListaBtn', 'n': 'criarListaBtn',
             'm': 'buscarItemBtn', 'd': 'deletarSelecionadosBtn'
         };
         if (e.ctrlKey && shortcuts[e.key.toLowerCase()]) {
