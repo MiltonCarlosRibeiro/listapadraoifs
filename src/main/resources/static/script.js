@@ -1,7 +1,7 @@
 /**
  * @file script.js
  * @description Script principal e final para a aplicação de Lista Técnica IFS.
- * @version 12.0 - Restauradas as funções de navegação com Enter e alerta de duplicatas em tempo real.
+ * @version 12.2 - Verificação e correção final do fluxo de salvamento e restauração de sessão.
  */
 
 // ===================================================================================
@@ -98,6 +98,53 @@ function acaoImportouOuAdicionouLinhas() {
     atualizarContagemDeNiveis();
 }
 
+/**
+ * @function handlePaste
+ * @description Processa dados colados (ex: do Excel) na tabela.
+ * @param {ClipboardEvent} e - O evento de colagem.
+ */
+function handlePaste(e) {
+    if (e.target.tagName !== 'INPUT' || e.target.readOnly) {
+        return;
+    }
+    e.preventDefault();
+
+    const text = (e.clipboardData || window.clipboardData).getData('text/plain');
+    const pastedRows = text.trim().split(/\r?\n/);
+
+    if (pastedRows.length === 0) return;
+
+    const startRow = e.target.closest('tr');
+    const startCellIndex = e.target.closest('td').cellIndex;
+    let tableRows = Array.from(tabela.rows);
+    let currentRowIndex = tableRows.indexOf(startRow);
+
+    pastedRows.forEach((rowText, rowIndex) => {
+        let targetRow = tableRows[currentRowIndex + rowIndex];
+        if (!targetRow) {
+            targetRow = criarLinhaVazia();
+            tabela.appendChild(targetRow);
+            tableRows.push(targetRow); // Adiciona a nova linha ao array para referência futura
+        }
+
+        const pastedCells = rowText.split('\t');
+        pastedCells.forEach((cellText, colIndex) => {
+            const targetCellIndex = startCellIndex + colIndex;
+            const targetCell = targetRow.cells[targetCellIndex];
+
+            if (targetCell) {
+                const input = targetCell.querySelector('input:not([readonly]), select');
+                if (input) {
+                    input.value = cellText.trim();
+                    input.dispatchEvent(new Event('input', { bubbles: true }));
+                }
+            }
+        });
+    });
+
+    acaoImportouOuAdicionouLinhas();
+}
+
 function resetDuplicateSearchState() {
     const tbodyElement = document.getElementById("listaTabela").querySelector('tbody');
     tbodyElement.classList.remove("table-faded");
@@ -145,7 +192,6 @@ function inputCell(type, readOnly = false, value = "", isPasteTarget = false, cl
     input.value = (value || "");
     if (className) td.classList.add(className);
 
-    // [CORRIGIDO] Listener de input com alerta de duplicata em tempo real
     input.addEventListener("input", async (e) => {
         if (e.target.closest('td').classList.contains('unidade-medida-col')) {
             e.target.value = e.target.value.toLowerCase();
@@ -174,7 +220,6 @@ function inputCell(type, readOnly = false, value = "", isPasteTarget = false, cl
         atualizarColunaLinha();
     });
 
-    // [CORRIGIDO] Listener de keydown com navegação por Enter
     input.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') {
             e.preventDefault();
@@ -212,7 +257,6 @@ function selectCell(options = [], selected = "", className = "") {
         atualizarColunaLinha();
     });
 
-    // [CORRIGIDO] Listener de keydown com navegação por Enter
     select.addEventListener('keydown', (e) => {
          if (e.key === 'Enter') {
             e.preventDefault();
@@ -292,9 +336,14 @@ function criarLinha(v = {}) {
     row.appendChild(inputCell("text", false, v.QTDE_MONTAGEM || "", false, "qtde-montagem-col"));
     row.appendChild(inputCell("text", false, (v.UNIDADE_MEDIDA || "").toLowerCase(), true, "unidade-medida-col"));
     row.appendChild(selectCell(fatorSucata, v.FATOR_SUCATA || "0"));
+
     aplicarIndentacao(row);
+
     if (!seqAtivo) seqTd.style.display = "none";
-    if (!nivelColVisivel) nivelCell.style.display = "none";
+
+    const nivelCell = row.querySelector('.nivel-col');
+    if (nivelCell && !nivelColVisivel) nivelCell.style.display = "none";
+
     return row;
 }
 
@@ -488,6 +537,8 @@ function focusOnDuplicate(rowToFocus) {
 }
 
 function adicionarListenersDeEventos() {
+    tabela.addEventListener('paste', handlePaste);
+
     document.getElementById("criarListaBtn").addEventListener("click", () => {
         if (tabela.rows.length > 0 && Array.from(tabela.rows).some(row => getLinhaData(row).CODIGO_MATERIAL)) {
             Swal.fire({ title: 'Criar Nova Lista?', text: "Qualquer trabalho não salvo será perdido.", icon: 'warning', showCancelButton: true, confirmButtonText: 'Sim, criar nova', cancelButtonText: 'Cancelar' }).then(result => {
@@ -640,14 +691,18 @@ function atualizarHorarioBackupDisplay(timestamp) {
     document.getElementById('ultimo-backup-horario').textContent = timestamp ? new Date(timestamp).toLocaleTimeString('pt-BR') : '--:--:--';
 }
 function salvarEstadoLocalmente() {
-    const dadosTabela = Array.from(tabela.rows).map(getLinhaData);
-    if (dadosTabela.length > 0) {
-        const dadosComTimestamp = { timestamp: new Date(), data: dadosTabela };
-        localStorage.setItem('listaTecnicaAutoSave', JSON.stringify(dadosComTimestamp));
-        atualizarHorarioBackupDisplay(dadosComTimestamp.timestamp);
-    } else {
-        localStorage.removeItem('listaTecnicaAutoSave');
-        atualizarHorarioBackupDisplay(null);
+    try {
+        const dadosTabela = Array.from(tabela.rows).map(getLinhaData);
+        if (dadosTabela.some(d => d.CODIGO_MATERIAL || d.ITEM_COMPONENTE)) {
+            const dadosComTimestamp = { timestamp: new Date().toISOString(), data: dadosTabela };
+            localStorage.setItem('listaTecnicaAutoSave', JSON.stringify(dadosComTimestamp));
+            atualizarHorarioBackupDisplay(dadosComTimestamp.timestamp);
+        } else {
+            localStorage.removeItem('listaTecnicaAutoSave');
+            atualizarHorarioBackupDisplay(null);
+        }
+    } catch (error) {
+        console.error("Erro ao salvar estado localmente:", error);
     }
 }
 
@@ -655,15 +710,24 @@ async function gerenciarInicializacao() {
     const dadosSalvosJSON = localStorage.getItem('listaTecnicaAutoSave');
     let dadosSalvos = null, ultimoBackupTimestamp = null;
     if (dadosSalvosJSON) {
-        const objetoSalvo = JSON.parse(dadosSalvosJSON);
-        dadosSalvos = objetoSalvo.data;
-        ultimoBackupTimestamp = objetoSalvo.timestamp;
+        try {
+            const objetoSalvo = JSON.parse(dadosSalvosJSON);
+            if (objetoSalvo && objetoSalvo.data) {
+                dadosSalvos = objetoSalvo.data;
+                ultimoBackupTimestamp = objetoSalvo.timestamp;
+            }
+        } catch (error) {
+            console.error("Erro ao parsear dados salvos. Removendo item corrompido.", error);
+            localStorage.removeItem('listaTecnicaAutoSave');
+        }
     }
     atualizarHorarioBackupDisplay(ultimoBackupTimestamp);
 
-    if (dadosSalvos) {
+    if (dadosSalvos && dadosSalvos.length > 0) {
         const result = await Swal.fire({
-            title: 'Como deseja continuar?', text: 'Encontramos um trabalho salvo.', icon: 'question',
+            title: 'Como deseja continuar?',
+            html: `Encontramos uma sessão salva de <strong>${new Date(ultimoBackupTimestamp).toLocaleString('pt-BR')}</strong>.`,
+            icon: 'question',
             showConfirmButton: true, confirmButtonText: 'Restaurar Sessão', confirmButtonColor: '#3085d6',
             showDenyButton: true, denyButtonText: 'Importar Arquivo', denyButtonColor: '#28a745',
             showCancelButton: true, cancelButtonText: 'Criar Nova Lista', cancelButtonColor: '#a31f35',
@@ -677,6 +741,7 @@ async function gerenciarInicializacao() {
             document.getElementById('inputFile').click();
         } else if (result.dismiss === Swal.DismissReason.cancel) {
             localStorage.removeItem('listaTecnicaAutoSave');
+            atualizarHorarioBackupDisplay(null);
             tabela.innerHTML = "";
             criar10Linhas();
             acaoImportouOuAdicionouLinhas();
@@ -701,7 +766,7 @@ async function gerenciarInicializacao() {
 }
 
 function configurarInterfaceETimers() {
-    setInterval(salvarEstadoLocalmente, 900000);
+    setInterval(salvarEstadoLocalmente, 60000); // Salva a cada 1 minuto
 }
 
 function setupThemeToggle() {
