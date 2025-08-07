@@ -653,35 +653,53 @@ function adicionarListenersDeEventos() {
                 return;
             }
         }
+
         if (e.ctrlKey && e.key === '1') {
             e.preventDefault();
             document.getElementById('salvarLocalBtn').click();
             return;
         }
+
         if (e.ctrlKey && e.shiftKey && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
             e.preventDefault();
             document.getElementById(e.key === 'ArrowUp' ? 'inserirAcimaBtn' : 'inserirAbaixoBtn').click();
             return;
         }
+
+        // Trata Ctrl + Delete como atalho para deletarSelecionadosBtn
+        if (e.ctrlKey && e.key === 'Delete') {
+            e.preventDefault();
+            document.getElementById('deletarSelecionadosBtn')?.click();
+            return;
+        }
+
         if (e.target.tagName === 'INPUT' || e.target.isContentEditable) return;
+
         const shortcuts = {
-            '\'': 'salvarListaBtn', 'g': 'continuarListaBtn', 'n': 'criarListaBtn',
-            'm': 'buscarItemBtn', 'd': 'deletarSelecionadosBtn'
+            '\'': 'salvarListaBtn',
+            'g': 'continuarListaBtn',
+            'n': 'criarListaBtn',
+            'm': 'buscarItemBtn'
+            // 'd' REMOVIDO DAQUI
         };
+
         if (e.ctrlKey && shortcuts[e.key.toLowerCase()]) {
             e.preventDefault();
             document.getElementById(shortcuts[e.key.toLowerCase()]).click();
         }
+
         if (e.ctrlKey && e.key.toLowerCase() === 'i') {
             e.preventDefault();
             document.querySelector('label[for="inputFile"]').click();
         }
+
         if (e.ctrlKey && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
             e.preventDefault();
             const row = tabela.querySelector(e.key === 'ArrowUp' ? 'tr:first-child' : 'tr:last-child');
             row?.querySelector('input, select')?.focus();
         }
     });
+
 }
 
 // ===================================================================================
