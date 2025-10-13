@@ -4,11 +4,13 @@ import br.com.pakmatic.listapadraoifs.model.ListaEntry;
 import br.com.pakmatic.listapadraoifs.repository.ListaRepository;
 import br.com.pakmatic.listapadraoifs.service.ListaService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Profile;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+@Profile("db")
 @RestController
 @RequestMapping("/api/listas")
 public class ListaController {
