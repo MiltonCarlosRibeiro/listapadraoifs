@@ -1,0 +1,3 @@
+no bash baixe a imagem
+
+docker pull miltoncarlos/listapadraoifs:latest

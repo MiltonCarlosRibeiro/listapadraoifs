@@ -1,0 +1,8 @@
+services:
+  app:
+    build: .
+    image: miltoncarlos/listapadraoifs:latest
+    ports:
+      - "8070:8070"
+    environment:
+      - SPRING_PROFILES_ACTIVE=nodb

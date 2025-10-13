@@ -1,0 +1,7 @@
+Rode a imagem:
+
+docker run -d --name listapadraoifs \
+  -p 8070:8070 \
+  -e SPRING_PROFILES_ACTIVE=nodb \
+  --restart unless-stopped \
+  miltoncarlos/listapadraoifs:latest
